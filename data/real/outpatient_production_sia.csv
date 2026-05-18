@@ -1,0 +1,6 @@
+period,ibge_city_code,unit_cnes,neighborhood_id,procedure_group,quantity,source
+2026-06,5212501,CNES-LUZ-003,jardim-inga,consultas_aps,3180,SIA aggregated seed
+2026-06,5212501,CNES-LUZ-004,pedregal,consultas_aps,2810,SIA aggregated seed
+2026-06,5212501,CNES-LUZ-001,centro,consultas_aps,2460,SIA aggregated seed
+2026-06,5212501,CNES-LUZ-005,mingone,atendimento_urgencia,1680,SIA aggregated seed
+2026-06,5212501,CNES-LUZ-006,setor-aeroporto,procedimentos_enfermagem,1420,SIA aggregated seed

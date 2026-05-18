@@ -1,0 +1,50 @@
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f7f7f2;
+  --foreground: #17211b;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.leaflet-container {
+  font: inherit;
+}
+
+.territory-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .no-print,
+  .app-shell-header {
+    display: none !important;
+  }
+
+  .print-report {
+    box-shadow: none !important;
+  }
+}

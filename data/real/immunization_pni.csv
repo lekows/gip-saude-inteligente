@@ -1,0 +1,6 @@
+period,ibge_city_code,neighborhood_id,vaccine,coverage_percent,doses_applied,source
+2026-06,5212501,jardim-inga,influenza,74,6820,PNI aggregated seed
+2026-06,5212501,pedregal,influenza,70,5480,PNI aggregated seed
+2026-06,5212501,parque-estrela-dalva,influenza,78,3180,PNI aggregated seed
+2026-06,5212501,centro,influenza,86,4020,PNI aggregated seed
+2026-06,5212501,setor-aeroporto,influenza,82,2190,PNI aggregated seed

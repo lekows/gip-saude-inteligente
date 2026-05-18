@@ -1,0 +1,6 @@
+period,ibge_city_code,neighborhood_id,cid_group,admissions,avg_stay_days,source
+2026-06,5212501,jardim-inga,cardiometabolico,42,5.4,SIH aggregated seed
+2026-06,5212501,pedregal,cardiometabolico,39,5.8,SIH aggregated seed
+2026-06,5212501,parque-estrela-dalva,respiratorio,21,4.2,SIH aggregated seed
+2026-06,5212501,centro,cardiometabolico,18,4.1,SIH aggregated seed
+2026-06,5212501,mingone,saude_mental,16,6.7,SIH aggregated seed

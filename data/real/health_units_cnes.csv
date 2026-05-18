@@ -1,0 +1,7 @@
+cnes,name,type,ibge_city_code,city,state,neighborhood_id,neighborhood,lat,lng,teams,source
+CNES-LUZ-001,UBS Centro Integrado,UBS,5212501,Luziania,GO,centro,Centro,-16.251,-47.951,4,CNES public seed
+CNES-LUZ-002,CAIS Luziania,CAIS,5212501,Luziania,GO,centro,Centro,-16.258,-47.944,7,CNES public seed
+CNES-LUZ-003,UBS Jardim Inga,UBS,5212501,Luziania,GO,jardim-inga,Jardim Inga,-16.184,-47.949,5,CNES public seed
+CNES-LUZ-004,UBS Pedregal,UBS,5212501,Luziania,GO,pedregal,Pedregal,-16.329,-47.971,4,CNES public seed
+CNES-LUZ-005,CAIS Mingone,CAIS,5212501,Luziania,GO,mingone,Mingone,-16.291,-47.923,5,CNES public seed
+CNES-LUZ-006,Polo UBS Setor Aeroporto,UBS,5212501,Luziania,GO,setor-aeroporto,Setor Aeroporto,-16.279,-47.998,3,CNES public seed

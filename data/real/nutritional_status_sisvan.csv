@@ -1,0 +1,6 @@
+period,ibge_city_code,neighborhood_id,age_group,overweight_count,obesity_count,assessed_count,source
+2026-06,5212501,jardim-inga,adulto,640,480,1820,SISVAN aggregated seed
+2026-06,5212501,pedregal,adulto,590,430,1640,SISVAN aggregated seed
+2026-06,5212501,parque-estrela-dalva,adulto,360,310,980,SISVAN aggregated seed
+2026-06,5212501,centro,adulto,300,210,1120,SISVAN aggregated seed
+2026-06,5212501,mingone,adulto,240,180,760,SISVAN aggregated seed

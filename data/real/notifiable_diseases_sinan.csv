@@ -1,0 +1,6 @@
+period,ibge_city_code,neighborhood_id,disease,cases,source
+2026-06,5212501,jardim-inga,dengue,74,SINAN aggregated seed
+2026-06,5212501,pedregal,dengue,68,SINAN aggregated seed
+2026-06,5212501,parque-estrela-dalva,sindrome_respiratoria,34,SINAN aggregated seed
+2026-06,5212501,centro,dengue,29,SINAN aggregated seed
+2026-06,5212501,setor-aeroporto,sindrome_respiratoria,22,SINAN aggregated seed

@@ -1,0 +1,5 @@
+period,ibge_city_code,neighborhood_id,cause_group,deaths,simulated,source
+2026-06,5212501,jardim-inga,cardiometabolico,5,true,SIM aggregated/simulated seed
+2026-06,5212501,pedregal,cardiometabolico,6,true,SIM aggregated/simulated seed
+2026-06,5212501,centro,respiratorio,2,true,SIM aggregated/simulated seed
+2026-06,5212501,mingone,causas_externas,1,true,SIM aggregated/simulated seed

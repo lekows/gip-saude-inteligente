@@ -1,0 +1,7 @@
+period,ibge_city_code,neighborhood_id,unit_cnes,condition,target_population,registered_patients,screenings,high_risk_patients,early_returns,coverage_percent,source
+2026-06,5212501,jardim-inga,CNES-LUZ-003,hipertensao,7200,5140,2980,910,790,71,SISAB aggregated seed
+2026-06,5212501,pedregal,CNES-LUZ-004,diabetes,6100,4260,2450,840,650,70,SISAB aggregated seed
+2026-06,5212501,parque-estrela-dalva,CNES-LUZ-003,obesidade,3600,2790,1520,410,430,78,SISAB aggregated seed
+2026-06,5212501,centro,CNES-LUZ-001,hipertensao,4400,3920,2260,360,350,89,SISAB aggregated seed
+2026-06,5212501,mingone,CNES-LUZ-005,saudeMental,3300,2510,1310,330,300,76,SISAB aggregated seed
+2026-06,5212501,setor-aeroporto,CNES-LUZ-006,respiratoria,2700,2260,1190,210,220,84,SISAB aggregated seed

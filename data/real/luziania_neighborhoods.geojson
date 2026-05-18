@@ -1,0 +1,36 @@
+{
+  "type": "FeatureCollection",
+  "name": "luziania_neighborhoods_mvp",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "centro", "name": "Centro", "ibge_city_code": "5212501", "population": 18200 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-47.966,-16.238],[-47.94,-16.236],[-47.931,-16.254],[-47.947,-16.268],[-47.971,-16.261],[-47.966,-16.238]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "jardim-inga", "name": "Jardim Inga", "ibge_city_code": "5212501", "population": 32400 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-47.982,-16.158],[-47.931,-16.153],[-47.911,-16.184],[-47.937,-16.214],[-47.991,-16.209],[-47.982,-16.158]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "parque-estrela-dalva", "name": "Parque Estrela Dalva", "ibge_city_code": "5212501", "population": 14350 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-48.034,-16.196],[-47.989,-16.205],[-47.986,-16.233],[-48.014,-16.252],[-48.046,-16.235],[-48.034,-16.196]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "mingone", "name": "Mingone", "ibge_city_code": "5212501", "population": 11800 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-47.944,-16.264],[-47.902,-16.266],[-47.891,-16.291],[-47.917,-16.313],[-47.956,-16.303],[-47.944,-16.264]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "setor-aeroporto", "name": "Setor Aeroporto", "ibge_city_code": "5212501", "population": 9800 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-48.018,-16.249],[-47.973,-16.261],[-47.968,-16.289],[-47.997,-16.306],[-48.032,-16.291],[-48.018,-16.249]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "pedregal", "name": "Pedregal", "ibge_city_code": "5212501", "population": 21300 },
+      "geometry": { "type": "Polygon", "coordinates": [[[-48.003,-16.3],[-47.951,-16.304],[-47.932,-16.331],[-47.961,-16.358],[-48.016,-16.348],[-48.003,-16.3]]] }
+    }
+  ]
+}
