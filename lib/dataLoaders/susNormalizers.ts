@@ -13,6 +13,7 @@ import type {
   SusRiskLevel,
   TerritorialIndicator
 } from "@/types/sus";
+import { clampScore } from "@/lib/domainRules";
 import type { HealthCondition, LatLngTuple } from "@/types/territorial";
 
 interface GeoJsonFeature {
@@ -179,7 +180,7 @@ export function calculateSusTerritorialScore(indicator: TerritorialIndicator) {
   const hasDmLoad = Math.min(10, indicator.highRiskPatients / 95);
   const interviews360 = Math.min(10, indicator.notifiableCases / 10);
 
-  return Math.round(
+  return clampScore(
     lowCoverage +
       highRiskPercent +
       missingPatients +

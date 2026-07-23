@@ -3,6 +3,7 @@ import type {
   ImportPreview,
   ImportValidationResult
 } from "@/types/dataImport";
+import { findIdentifiablePatientColumns } from "@/lib/dataGovernance/privacyRules";
 
 export const importDatasetLabels: Record<ImportDatasetType, string> = {
   cnes: "CNES - Unidades de saude",
@@ -140,6 +141,7 @@ function buildPreview({
   const validations = [
     ...validateRequiredColumns(datasetType, headers),
     ...validateMunicipality(rows),
+    ...validatePrivacyColumns(datasetType, headers),
     ...extraValidations
   ];
   const hasError = validations.some((item) => item.severity === "error");
@@ -154,6 +156,32 @@ function buildPreview({
     status: hasError ? "rascunho" : "validado",
     validations
   };
+}
+
+function validatePrivacyColumns(
+  datasetType: ImportDatasetType,
+  headers: string[]
+): ImportValidationResult[] {
+  if (datasetType !== "sisab") return [];
+
+  const identifiableColumns = findIdentifiablePatientColumns(headers);
+  if (!identifiableColumns.length) {
+    return [
+      {
+        severity: "ok",
+        title: "Privacidade da carga",
+        message: "Nenhuma coluna de identificacao individual foi encontrada."
+      }
+    ];
+  }
+
+  return [
+    {
+      severity: "error",
+      title: "Dados identificaveis bloqueados",
+      message: `Remova as colunas individuais: ${identifiableColumns.join(", ")}. O GIP aceita apenas indicadores agregados.`
+    }
+  ];
 }
 
 function validateRequiredColumns(

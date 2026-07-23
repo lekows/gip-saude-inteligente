@@ -7,17 +7,14 @@ import type {
   TerritorialScoreFactors
 } from "@/types/managerDashboard";
 import type { HealthCondition, NeighborhoodRisk } from "@/types/territorial";
+import {
+  calculateBoundedScore,
+  PATIENT_SCORE_LIMITS,
+  TERRITORIAL_SCORE_LIMITS
+} from "@/lib/domainRules";
 
 export function calculatePatientScore(factors: PatientScoreFactors) {
-  return clampScore(
-    factors.alteredBloodPressure +
-      factors.alteredGlucose +
-      factors.bmiObesity +
-      factors.chronicDiseases +
-      factors.lowMedicationAdherence +
-      factors.earlyReturn +
-      factors.vulnerabilityAge
-  );
+  return calculateBoundedScore(factors, PATIENT_SCORE_LIMITS);
 }
 
 export function classifyPatientRisk(score: number): ManagerRiskLevel {
@@ -27,15 +24,7 @@ export function classifyPatientRisk(score: number): ManagerRiskLevel {
 }
 
 export function calculateTerritorialScore(factors: TerritorialScoreFactors) {
-  return clampScore(
-    factors.lowCoverage +
-      factors.highRiskPercent +
-      factors.missingPatients +
-      factors.earlyReturns +
-      factors.waitingTime +
-      factors.hasDmLoad +
-      factors.interviews360
-  );
+  return calculateBoundedScore(factors, TERRITORIAL_SCORE_LIMITS);
 }
 
 export function classifyTerritorialRisk(score: number): ManagerRiskLevel {
@@ -138,8 +127,4 @@ type NumericAreaKey = {
 
 function sum(items: EnrichedManagerArea[], key: NumericAreaKey) {
   return items.reduce((total, item) => total + item[key], 0);
-}
-
-function clampScore(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)));
 }
