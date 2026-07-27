@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+type ProfileAccess = {
+  role: string | null;
+  approval_status: string | null;
+  active: boolean | null;
+};
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [message, setMessage] = useState("Confirmando seu acesso...");
@@ -21,11 +27,15 @@ export default function AuthCallbackPage() {
 
         await supabase.rpc("claim_first_admin");
 
-        const { data: profile } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("role, approval_status, active")
           .eq("id", data.session.user.id)
           .single();
+
+        if (profileError) throw profileError;
+
+        const profile = profileData as ProfileAccess | null;
 
         if (profile?.role === "administrador" && profile.active) {
           router.replace("/");
