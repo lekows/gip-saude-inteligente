@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Mail, Chrome, Facebook, Windows } from "lucide-react";
+import { Mail, Chrome, Facebook, Monitor } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function EntrarPage() {
@@ -60,7 +60,7 @@ export default function EntrarPage() {
 
           <div className="mt-6 grid gap-3">
             <ProviderButton icon={<Chrome size={19} />} label="Continuar com Google" onClick={() => signInWithProvider("google")} disabled={loading} />
-            <ProviderButton icon={<Windows size={19} />} label="Continuar com Microsoft" onClick={() => signInWithProvider("azure")} disabled={loading} />
+            <ProviderButton icon={<Monitor size={19} />} label="Continuar com Microsoft" onClick={() => signInWithProvider("azure")} disabled={loading} />
             <ProviderButton icon={<Facebook size={19} />} label="Continuar com Facebook" onClick={() => signInWithProvider("facebook")} disabled={loading} />
           </div>
 
