@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type ProfileAccess = {
   role: string | null;
-  approval_status: string | null;
+  account_status: string | null;
   active: boolean | null;
 };
 
@@ -18,19 +18,17 @@ export default function AuthCallbackPage() {
     async function finishLogin() {
       try {
         const supabase = getSupabaseBrowserClient();
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
-        if (!data.session) {
+        if (!data.user) {
           setMessage("Não foi possível confirmar o acesso. Tente novamente.");
           return;
         }
 
-        await supabase.rpc("claim_first_admin");
-
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("role, approval_status, active")
-          .eq("id", data.session.user.id)
+          .select("role, account_status, active")
+          .eq("id", data.user.id)
           .single();
 
         if (profileError) throw profileError;
@@ -42,14 +40,15 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        if (profile?.approval_status !== "aprovado" || !profile?.active) {
+        if (profile?.account_status !== "aprovado" || !profile?.active) {
           router.replace("/aguardando-aprovacao");
           return;
         }
 
         router.replace("/");
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Erro ao concluir o acesso.");
+        console.error("Falha ao concluir autenticacao", error);
+        setMessage("Nao foi possivel concluir o acesso. Tente novamente.");
       }
     }
 
