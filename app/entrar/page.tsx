@@ -5,6 +5,27 @@ import Link from "next/link";
 import { Mail, Chrome, Facebook, Monitor } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+const oauthProviders = [
+  {
+    provider: "google" as const,
+    label: "Continuar com Google",
+    enabled: process.env.NEXT_PUBLIC_SUPABASE_AUTH_GOOGLE_ENABLED === "true",
+    icon: <Chrome size={19} />,
+  },
+  {
+    provider: "azure" as const,
+    label: "Continuar com Microsoft",
+    enabled: process.env.NEXT_PUBLIC_SUPABASE_AUTH_AZURE_ENABLED === "true",
+    icon: <Monitor size={19} />,
+  },
+  {
+    provider: "facebook" as const,
+    label: "Continuar com Facebook",
+    enabled: process.env.NEXT_PUBLIC_SUPABASE_AUTH_FACEBOOK_ENABLED === "true",
+    icon: <Facebook size={19} />,
+  },
+].filter(({ enabled }) => enabled);
+
 export default function EntrarPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -21,7 +42,13 @@ export default function EntrarPage() {
       });
       if (error) throw error;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível iniciar o acesso.");
+      const providerUnavailable =
+        error instanceof Error && error.message.includes("Unsupported provider");
+      setMessage(
+        providerUnavailable
+          ? "Este provedor ainda não está habilitado. Use o acesso por e-mail."
+          : "Não foi possível iniciar o acesso. Tente novamente.",
+      );
       setLoading(false);
     }
   }
@@ -51,22 +78,36 @@ export default function EntrarPage() {
         <div className="bg-[#173d2b] p-8 text-white lg:p-12">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-green-200">GIP Saúde Inteligente</p>
           <h1 className="mt-4 text-3xl font-semibold leading-tight">Acesso simples para professores, acadêmicos e gestores.</h1>
-          <p className="mt-4 leading-7 text-green-50">Entre com uma conta que você já usa. Novos cadastros ficam aguardando aprovação antes de acessar informações internas.</p>
+          <p className="mt-4 leading-7 text-green-50">Receba um link seguro no seu e-mail. Novos cadastros ficam aguardando aprovação antes de acessar informações internas.</p>
         </div>
 
         <div className="p-8 lg:p-12">
           <h2 className="text-2xl font-semibold">Entrar ou criar cadastro</h2>
-          <p className="mt-2 text-sm leading-6 text-stone-600">Escolha a forma mais fácil para você.</p>
+          <p className="mt-2 text-sm leading-6 text-stone-600">Informe seu e-mail para receber o link de acesso.</p>
 
-          <div className="mt-6 grid gap-3">
-            <ProviderButton icon={<Chrome size={19} />} label="Continuar com Google" onClick={() => signInWithProvider("google")} disabled={loading} />
-            <ProviderButton icon={<Monitor size={19} />} label="Continuar com Microsoft" onClick={() => signInWithProvider("azure")} disabled={loading} />
-            <ProviderButton icon={<Facebook size={19} />} label="Continuar com Facebook" onClick={() => signInWithProvider("facebook")} disabled={loading} />
-          </div>
+          {oauthProviders.length > 0 && (
+            <>
+              <div className="mt-6 grid gap-3">
+                {oauthProviders.map(({ provider, icon, label }) => (
+                  <ProviderButton
+                    key={provider}
+                    icon={icon}
+                    label={label}
+                    onClick={() => signInWithProvider(provider)}
+                    disabled={loading}
+                  />
+                ))}
+              </div>
 
-          <div className="my-6 flex items-center gap-3 text-xs text-stone-400"><span className="h-px flex-1 bg-stone-200" />ou use seu e-mail<span className="h-px flex-1 bg-stone-200" /></div>
+              <div className="my-6 flex items-center gap-3 text-xs text-stone-400">
+                <span className="h-px flex-1 bg-stone-200" />
+                ou use seu e-mail
+                <span className="h-px flex-1 bg-stone-200" />
+              </div>
+            </>
+          )}
 
-          <form onSubmit={sendMagicLink} className="space-y-3">
+          <form onSubmit={sendMagicLink} className={oauthProviders.length > 0 ? "space-y-3" : "mt-6 space-y-3"}>
             <label className="block text-sm font-medium" htmlFor="email">E-mail</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@exemplo.com" className="h-11 w-full rounded-md border border-stone-300 px-3 outline-none focus:border-[#1f7a4d]" />
             <button disabled={loading} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#1f7a4d] px-4 text-sm font-semibold text-white disabled:opacity-60">

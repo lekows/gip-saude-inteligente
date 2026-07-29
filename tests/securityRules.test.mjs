@@ -6,6 +6,10 @@ const callbackSource = readFileSync(
   new URL("../app/auth/callback/page.tsx", import.meta.url),
   "utf8",
 );
+const loginSource = readFileSync(
+  new URL("../app/entrar/page.tsx", import.meta.url),
+  "utf8",
+);
 
 test("auth callback validates the user with the Supabase server", () => {
   assert.match(callbackSource, /supabase\.auth\.getUser\(\)/);
@@ -19,4 +23,11 @@ test("auth callback never claims administrator privileges", () => {
 test("auth callback checks the profile account status column", () => {
   assert.match(callbackSource, /account_status/);
   assert.doesNotMatch(callbackSource, /approval_status/);
+});
+
+test("OAuth buttons require an explicit provider flag", () => {
+  assert.match(loginSource, /NEXT_PUBLIC_SUPABASE_AUTH_GOOGLE_ENABLED/);
+  assert.match(loginSource, /NEXT_PUBLIC_SUPABASE_AUTH_AZURE_ENABLED/);
+  assert.match(loginSource, /NEXT_PUBLIC_SUPABASE_AUTH_FACEBOOK_ENABLED/);
+  assert.match(loginSource, /\.filter\(\(\{ enabled \}\) => enabled\)/);
 });
