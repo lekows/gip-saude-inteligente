@@ -39,6 +39,21 @@ Data da verificacao: 23 de julho de 2026.
 
 As regras possuem testes automatizados executados por `npm run test:domain`.
 
+## Dicionario minimo e rastreabilidade
+
+Em 28 de julho de 2026, o MVP passou a manter um catalogo unico com:
+
+- nove fontes conceituais de dados SUS e territoriais;
+- 26 campos minimos documentados;
+- tipo, obrigatoriedade, classificacao e regra de qualidade por campo;
+- responsavel, periodicidade, escopo e status de homologacao por fonte;
+- marcacao explicita do arquivo SIM como inteiramente simulado;
+- integracao do mesmo catalogo com a pagina de qualidade dos dados.
+
+O catalogo pode ser consultado em `/data-dictionary`. O status
+`seed_pending_validation` significa que a estrutura e demonstrativa e ainda
+nao equivale a uma extracao oficial autorizada.
+
 ## Proxima dependencia institucional
 
 Antes de receber dados reais, o programa ainda precisa aprovar o dicionario de dados,

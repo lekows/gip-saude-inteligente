@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BookOpen,
   Database,
   FileUp,
   Home,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/municipal-goals", label: "Metas", icon: Target },
   { href: "/mobile", label: "Campo", icon: Smartphone },
   { href: "/data", label: "Dados SUS", icon: Database },
+  { href: "/data-dictionary", label: "Dicionario", icon: BookOpen },
   { href: "/data-import", label: "Importar", icon: FileUp },
   { href: "/data-quality", label: "Qualidade", icon: ShieldCheck }
 ];

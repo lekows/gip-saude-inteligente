@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BookOpen,
   ClipboardCheck,
   Database,
   FileUp,
@@ -15,26 +16,32 @@ import { getDataQualityReport } from "@/lib/dataLoaders/dataQualityService";
 
 const steps = [
   {
+    href: "/data-dictionary",
+    title: "1. Definir o contrato",
+    description: "Consultar fontes, campos, classificacao e regras de qualidade.",
+    icon: BookOpen
+  },
+  {
     href: "/data-import",
-    title: "1. Importar dados",
+    title: "2. Importar dados",
     description: "Validar CNES, SISAB e GeoJSON antes de publicar no MVP.",
     icon: FileUp
   },
   {
     href: "/data-quality",
-    title: "2. Auditar qualidade",
+    title: "3. Auditar qualidade",
     description: "Conferir fontes, selos, cobertura, alertas e limites LGPD.",
     icon: ClipboardCheck
   },
   {
     href: "/manager-dashboard",
-    title: "3. Usar no dashboard",
+    title: "4. Usar no dashboard",
     description: "Transformar dados agregados em indicadores para o gestor.",
     icon: LayoutDashboard
   },
   {
     href: "/territorial-map",
-    title: "4. Priorizar territorio",
+    title: "5. Priorizar territorio",
     description: "Levar scores e unidades para o mapa de Luziania.",
     icon: Map
   }
@@ -75,17 +82,17 @@ export default function DataHubPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href="/data-import"
+                href="/data-dictionary"
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-[#28352d]"
               >
-                Comecar importacao
+                Abrir dicionario
                 <ArrowRight size={16} />
               </Link>
               <Link
-                href="/data-quality"
+                href="/data-import"
                 className="inline-flex h-10 items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-ink hover:border-folha"
               >
-                Ver qualidade dos dados
+                Comecar importacao
               </Link>
             </div>
           </section>
@@ -112,7 +119,7 @@ export default function DataHubPage() {
           </Card>
         </div>
 
-        <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {steps.map((step) => {
             const Icon = step.icon;
             return (
@@ -142,8 +149,8 @@ export default function DataHubPage() {
             <CardTitle>Arquitetura do fluxo de dados</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 md:grid-cols-5">
-              {["CSV/GeoJSON", "Loaders", "Qualidade", "Dashboard", "Mapa"].map(
+            <div className="grid gap-3 md:grid-cols-6">
+              {["Dicionario", "CSV/GeoJSON", "Loaders", "Qualidade", "Dashboard", "Mapa"].map(
                 (item, index) => (
                   <div
                     key={item}

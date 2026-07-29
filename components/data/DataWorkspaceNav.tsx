@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  BookOpen,
   ClipboardCheck,
   Database,
   FileUp,
@@ -24,6 +25,12 @@ const dataNavItems = [
     label: "Importacao",
     description: "Validar cargas",
     icon: FileUp
+  },
+  {
+    href: "/data-dictionary",
+    label: "Dicionario",
+    description: "Campos e fontes",
+    icon: BookOpen
   },
   {
     href: "/data-quality",
