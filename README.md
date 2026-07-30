@@ -44,3 +44,9 @@ O projeto usa dados mockados, simulados ou agregados. Nao ha dados reais identif
 ## Publicacao
 
 Veja [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+## Continuacao por outro agente
+
+Leia [AGENTS.md](./AGENTS.md) e
+[docs/HANDOFF_ANTIGRAVITY.md](./docs/HANDOFF_ANTIGRAVITY.md) antes de alterar o
+projeto.
