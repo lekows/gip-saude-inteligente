@@ -9,9 +9,11 @@
     "lint": "next lint",
     "test:domain": "node --experimental-strip-types --test tests/domainRules.test.mjs",
     "test:security": "node --test tests/securityRules.test.mjs",
-    "test": "npm run test:domain && npm run test:security"
+    "test:behavioral": "node --experimental-strip-types --test tests/authSecurityBehavioral.test.mjs",
+    "test": "npm run test:domain && npm run test:security && npm run test:behavioral"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.49.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
