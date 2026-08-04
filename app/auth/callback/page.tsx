@@ -10,6 +10,21 @@ type ProfileAccess = {
   active: boolean | null;
 };
 
+function getRedirectByRole(role: string | null): string {
+  switch (role) {
+    case "administrador":
+    case "professor_coordenador":
+    case "professor_colaborador":
+    case "gestor_municipal":
+      return "/manager-dashboard";
+    case "academico_colaborador":
+    case "academico_participante":
+      return "/mobile";
+    default:
+      return "/aguardando-aprovacao";
+  }
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [message, setMessage] = useState("Confirmando seu acesso...");
@@ -35,17 +50,15 @@ export default function AuthCallbackPage() {
 
         const profile = profileData as ProfileAccess | null;
 
-        if (profile?.role === "administrador" && profile.active) {
-          router.replace("/");
-          return;
-        }
-
-        if (profile?.account_status !== "aprovado" || !profile?.active) {
+        // Se não tem perfil ou está pendente/inativo
+        if (!profile || profile.account_status !== "aprovado" || !profile.active) {
           router.replace("/aguardando-aprovacao");
           return;
         }
 
-        router.replace("/");
+        // Redireciona conforme o papel
+        const redirectTo = getRedirectByRole(profile.role);
+        router.replace(redirectTo);
       } catch (error) {
         console.error("Falha ao concluir autenticacao", error);
         setMessage("Nao foi possivel concluir o acesso. Tente novamente.");
@@ -55,5 +68,11 @@ export default function AuthCallbackPage() {
     finishLogin();
   }, [router]);
 
-  return <main className="grid min-h-screen place-items-center bg-[#f7f7f2] p-6"><div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-sm"><p className="font-semibold text-ink">{message}</p></div></main>;
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#f7f7f2] p-6">
+      <div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-sm">
+        <p className="font-semibold text-ink">{message}</p>
+      </div>
+    </main>
+  );
 }
