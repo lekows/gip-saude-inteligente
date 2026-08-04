@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Bar,
   BarChart,
@@ -125,10 +126,18 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
               mutiroes e priorizacao por dados mockados e agregados.
             </p>
           </div>
-          <Button onClick={handleSuggestCampaign}>
-            <Sparkles size={17} />
-            Sugerir proximo mutirao com IA
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/gerenciar-usuarios">
+              <Button variant="outline">
+                <Users size={17} />
+                Gerenciar usuarios
+              </Button>
+            </Link>
+            <Button onClick={handleSuggestCampaign}>
+              <Sparkles size={17} />
+              Sugerir proximo mutirao com IA
+            </Button>
+          </div>
         </div>
 
         <Card className="mt-6">
