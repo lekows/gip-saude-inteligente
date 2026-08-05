@@ -12,6 +12,7 @@
     "test": "npm run test:domain && npm run test:security"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",

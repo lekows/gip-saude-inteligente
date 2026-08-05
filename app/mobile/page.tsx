@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -24,6 +25,7 @@ import {
   markRecordsAsSynced,
   summarizeOfflineQueue
 } from "@/lib/mobileMvpService";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { ApproachOutcome, OfflineApproachRecord } from "@/types/mobile";
 
 const SimpleRiskMap = dynamic(
@@ -38,10 +40,17 @@ const SimpleRiskMap = dynamic(
   }
 );
 
+const ACADEMIC_ROLES = [
+  "academico_colaborador",
+  "academico_participante",
+];
+
 const { mission } = getMobileMvpData();
 const queueStorageKey = "gip-mobile-offline-queue";
 
 export default function MobilePage() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState(mission.stats);
   const [modalOpen, setModalOpen] = useState(false);
   const [feedback, setFeedback] = useState("Pronto para registrar a proxima abordagem.");
@@ -50,6 +59,40 @@ export default function MobilePage() {
   const queueSummary = useMemo(() => summarizeOfflineQueue(offlineRecords), [offlineRecords]);
 
   useEffect(() => {
+    async function checkAuth() {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/entrar?redirect=/mobile");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, account_status, active")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !profile.active || profile.account_status !== "aprovado") {
+        router.replace("/aguardando-aprovacao");
+        return;
+      }
+
+      if (!ACADEMIC_ROLES.includes(profile.role ?? "")) {
+        router.replace("/manager-dashboard");
+        return;
+      }
+
+      setAuthChecked(true);
+    }
+
+    checkAuth();
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     setIsOnline(navigator.onLine);
     const stored = window.localStorage.getItem(queueStorageKey);
     if (stored) {
@@ -73,7 +116,7 @@ export default function MobilePage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [authChecked]);
 
   useEffect(() => {
     window.localStorage.setItem(queueStorageKey, JSON.stringify(offlineRecords));
@@ -95,6 +138,14 @@ export default function MobilePage() {
   function handleSyncQueue() {
     setOfflineRecords((current) => markRecordsAsSynced(current));
     setFeedback("Sincronizacao simulada concluida. Registros enviados de forma agregada.");
+  }
+
+  if (!authChecked) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f7f7f2]">
+        <p className="text-stone-500">Verificando acesso...</p>
+      </main>
+    );
   }
 
   return (
