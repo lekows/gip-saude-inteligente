@@ -13,6 +13,21 @@ type InviteResult = {
   message: string;
 };
 
+// Tipagem local dos dados lidos da tabela profiles.
+// O client de browser nao usa o tipo Database gerado, entao o supabase-js
+// (>= 2.49) tipa os resultados como `never` sem um cast explicito.
+type ProfileAccess = {
+  role: string | null;
+  account_status: string | null;
+  active: boolean | null;
+};
+
+type ExistingProfile = {
+  id: string;
+  email: string;
+  account_status: string | null;
+};
+
 export default function ConvidarAlunosPage() {
   const router = useRouter();
   const [emailsInput, setEmailsInput] = useState("");
@@ -31,11 +46,13 @@ export default function ConvidarAlunosPage() {
         return;
       }
 
-      const { data: profile } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("role, account_status, active")
         .eq("id", user.id)
         .single();
+
+      const profile = profileData as ProfileAccess | null;
 
       if (!profile || !profile.active || profile.account_status !== "aprovado") {
         router.replace("/aguardando-aprovacao");
@@ -78,11 +95,13 @@ export default function ConvidarAlunosPage() {
     for (const email of emails) {
       try {
         // Verifica se já existe perfil com este e-mail
-        const { data: existing } = await supabase
+        const { data: existingData } = await supabase
           .from("profiles")
           .select("id, email, account_status")
           .eq("email", email)
           .maybeSingle();
+
+        const existing = existingData as ExistingProfile | null;
 
         if (existing) {
           newResults.push({
@@ -103,7 +122,7 @@ export default function ConvidarAlunosPage() {
           role: "academico_participante",
           account_status: "pendente",
           active: true,
-        });
+        } as never);
 
         if (error) {
           newResults.push({ email, status: "error", message: error.message });
