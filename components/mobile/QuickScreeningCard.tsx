@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Stethoscope } from "lucide-react";
+import { AlertCircle, CheckCircle2, Save, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { classifyQuickScreening } from "@/lib/mobileMvpService";
@@ -13,17 +13,83 @@ const riskStyles: Record<ScreeningRisk, string> = {
   vermelho: "border-red-200 bg-red-50 text-alerta"
 };
 
-export function QuickScreeningCard() {
+type QuickScreeningCardProps = {
+  onSave?: (data: {
+    patientName?: string;
+    age?: number;
+    sex?: string;
+    neighborhood?: string;
+    hasHypertension?: boolean;
+    hasDiabetes?: boolean;
+    bpSystolic?: number;
+    bpDiastolic?: number;
+    bloodGlucose?: number;
+    bmi?: number;
+    notes?: string;
+  }) => void | Promise<void>;
+};
+
+export function QuickScreeningCard({ onSave }: QuickScreeningCardProps = {}) {
+  const [patientName, setPatientName] = useState("");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
   const [bloodPressure, setBloodPressure] = useState("");
   const [glucose, setGlucose] = useState("");
   const [complaint, setComplaint] = useState("");
   const [needsReferral, setNeedsReferral] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const classification = useMemo(
     () => classifyQuickScreening({ bloodPressure, glucose, complaint, needsReferral }),
     [bloodPressure, glucose, complaint, needsReferral]
   );
+
+  // Parse blood pressure "140/90" into systolic/diastolic
+  const parsedBP = useMemo(() => {
+    const match = bloodPressure.match(/(\d+)\s*\/\s*(\d+)/);
+    if (match) {
+      return { systolic: parseInt(match[1], 10), diastolic: parseInt(match[2], 10) };
+    }
+    return null;
+  }, [bloodPressure]);
+
+  const hasHypertension = parsedBP !== null && (parsedBP.systolic >= 140 || parsedBP.diastolic >= 90);
+  const hasDiabetes = glucose !== "" && parseInt(glucose, 10) >= 126;
+
+  async function handleSave() {
+    if (!onSave) return;
+
+    setSaving(true);
+    try {
+      await onSave({
+        patientName: patientName || undefined,
+        age: age ? parseInt(age, 10) : undefined,
+        sex: sex || undefined,
+        neighborhood: neighborhood || undefined,
+        hasHypertension,
+        hasDiabetes,
+        bpSystolic: parsedBP?.systolic,
+        bpDiastolic: parsedBP?.diastolic,
+        bloodGlucose: glucose ? parseInt(glucose, 10) : undefined,
+        notes: [complaint, needsReferral ? "Encaminhamento necessario" : ""].filter(Boolean).join(". ") || undefined,
+      });
+      setSubmitted(false);
+      setPatientName("");
+      setAge("");
+      setSex("");
+      setNeighborhood("");
+      setBloodPressure("");
+      setGlucose("");
+      setComplaint("");
+      setNeedsReferral(false);
+    } catch (err) {
+      console.error("Erro ao salvar triagem:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Card className="border-0 shadow-md">
@@ -34,6 +100,47 @@ export function QuickScreeningCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <Field label="Nome do paciente (opcional)">
+          <input
+            value={patientName}
+            onChange={(event) => setPatientName(event.target.value)}
+            placeholder="Ex: Maria Silva"
+            className="h-12 w-full rounded-lg border border-stone-300 px-3 text-base outline-none focus:border-folha"
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Idade">
+            <input
+              value={age}
+              onChange={(event) => setAge(event.target.value)}
+              placeholder="Ex: 58"
+              inputMode="numeric"
+              className="h-12 w-full rounded-lg border border-stone-300 px-3 text-base outline-none focus:border-folha"
+            />
+          </Field>
+          <Field label="Sexo">
+            <select
+              value={sex}
+              onChange={(event) => setSex(event.target.value)}
+              className="h-12 w-full rounded-lg border border-stone-300 px-3 text-base outline-none focus:border-folha"
+            >
+              <option value="">Selecione</option>
+              <option value="F">Feminino</option>
+              <option value="M">Masculino</option>
+            </select>
+          </Field>
+        </div>
+
+        <Field label="Bairro">
+          <input
+            value={neighborhood}
+            onChange={(event) => setNeighborhood(event.target.value)}
+            placeholder="Ex: Jardim das Oliveiras"
+            className="h-12 w-full rounded-lg border border-stone-300 px-3 text-base outline-none focus:border-folha"
+          />
+        </Field>
+
         <Field label="Pressao arterial">
           <input
             value={bloodPressure}
@@ -83,6 +190,18 @@ export function QuickScreeningCard() {
             {classification.guidance}
           </div>
         ) : null}
+
+        {onSave && (
+          <Button
+            className="h-12 w-full text-base"
+            variant="outline"
+            onClick={handleSave}
+            disabled={saving || (!bloodPressure && !glucose && !complaint)}
+          >
+            <Save size={17} className="mr-2" />
+            {saving ? "Salvando..." : "Salvar triagem no sistema"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

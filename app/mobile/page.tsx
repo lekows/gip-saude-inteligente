@@ -10,7 +10,8 @@ import {
   Navigation,
   Radio,
   Send,
-  Stethoscope
+  Stethoscope,
+  Save
 } from "lucide-react";
 import { ApproachModal } from "@/components/mobile/ApproachModal";
 import { MainActionButton } from "@/components/mobile/MainActionButton";
@@ -26,6 +27,7 @@ import {
   summarizeOfflineQueue
 } from "@/lib/mobileMvpService";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { saveScreening, syncOfflineScreenings } from "@/lib/supabase/mobileService";
 import type { ApproachOutcome, OfflineApproachRecord } from "@/types/mobile";
 
 const SimpleRiskMap = dynamic(
@@ -47,6 +49,7 @@ const ACADEMIC_ROLES = [
 
 const { mission } = getMobileMvpData();
 const queueStorageKey = "gip-mobile-offline-queue";
+const screeningStorageKey = "gip-mobile-offline-screenings";
 
 export default function MobilePage() {
   const router = useRouter();
@@ -56,6 +59,7 @@ export default function MobilePage() {
   const [feedback, setFeedback] = useState("Pronto para registrar a proxima abordagem.");
   const [isOnline, setIsOnline] = useState(mission.online);
   const [offlineRecords, setOfflineRecords] = useState<OfflineApproachRecord[]>([]);
+  const [offlineScreenings, setOfflineScreenings] = useState<any[]>([]);
   const queueSummary = useMemo(() => summarizeOfflineQueue(offlineRecords), [offlineRecords]);
 
   useEffect(() => {
@@ -98,6 +102,10 @@ export default function MobilePage() {
     if (stored) {
       setOfflineRecords(JSON.parse(stored) as OfflineApproachRecord[]);
     }
+    const storedScreenings = window.localStorage.getItem(screeningStorageKey);
+    if (storedScreenings) {
+      setOfflineScreenings(JSON.parse(storedScreenings));
+    }
 
     function handleOnline() {
       setIsOnline(true);
@@ -122,6 +130,10 @@ export default function MobilePage() {
     window.localStorage.setItem(queueStorageKey, JSON.stringify(offlineRecords));
   }, [offlineRecords]);
 
+  useEffect(() => {
+    window.localStorage.setItem(screeningStorageKey, JSON.stringify(offlineScreenings));
+  }, [offlineScreenings]);
+
   function handleOutcome(outcome: ApproachOutcome) {
     const record = createOfflineApproachRecord({
       outcome,
@@ -135,9 +147,57 @@ export default function MobilePage() {
     setFeedback(`${getOutcomeMessage(outcome)} Registro salvo na fila local.`);
   }
 
-  function handleSyncQueue() {
+  async function handleSaveScreening(screeningData: {
+    patientName?: string;
+    age?: number;
+    sex?: string;
+    neighborhood?: string;
+    hasHypertension?: boolean;
+    hasDiabetes?: boolean;
+    bpSystolic?: number;
+    bpDiastolic?: number;
+    bloodGlucose?: number;
+    bmi?: number;
+    notes?: string;
+  }) {
+    if (!isOnline) {
+      // Salva offline
+      const offlineRecord = {
+        id: crypto.randomUUID(),
+        ...screeningData,
+        createdAt: new Date().toISOString(),
+      };
+      setOfflineScreenings((current) => [offlineRecord, ...current]);
+      setFeedback("Triagem salva localmente. Sincronize quando houver internet.");
+      return;
+    }
+
+    try {
+      await saveScreening(screeningData);
+      setFeedback("Triagem salva no servidor com sucesso!");
+    } catch (err) {
+      setFeedback(`Erro ao salvar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+    }
+  }
+
+  async function handleSyncQueue() {
     setOfflineRecords((current) => markRecordsAsSynced(current));
-    setFeedback("Sincronizacao simulada concluida. Registros enviados de forma agregada.");
+    setFeedback("Sincronizacao de abordagens simulada concluida.");
+
+    // Sincroniza triagens offline
+    if (offlineScreenings.length > 0) {
+      try {
+        const results = await syncOfflineScreenings(offlineScreenings);
+        const synced = results.filter((r) => r.status === "synced").length;
+        const errors = results.filter((r) => r.status === "error").length;
+        setOfflineScreenings([]);
+        setFeedback(
+          `Sincronizado! ${synced} triagens enviadas${errors > 0 ? `, ${errors} com erro` : ""}.`
+        );
+      } catch (err) {
+        setFeedback("Erro ao sincronizar triagens. Tente novamente.");
+      }
+    }
   }
 
   if (!authChecked) {
@@ -208,7 +268,7 @@ export default function MobilePage() {
           <OfflineSyncPanel
             isOnline={isOnline}
             records={offlineRecords}
-            pendingCount={queueSummary.pending}
+            pendingCount={queueSummary.pending + offlineScreenings.length}
             onSync={handleSyncQueue}
           />
         </div>
@@ -229,7 +289,7 @@ export default function MobilePage() {
         </section>
 
         <div className="mt-4">
-          <QuickScreeningCard />
+          <QuickScreeningCard onSave={handleSaveScreening} />
         </div>
       </section>
 
