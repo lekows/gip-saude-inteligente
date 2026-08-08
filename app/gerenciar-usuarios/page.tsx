@@ -31,7 +31,6 @@ export default function GerenciarUsuariosPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -58,8 +57,6 @@ export default function GerenciarUsuariosPage() {
         return;
       }
 
-      setCurrentUserRole(me.role);
-
       // Carrega todos os perfis
       const { data, error } = await supabase
         .from("profiles")
@@ -81,7 +78,7 @@ export default function GerenciarUsuariosPage() {
     const supabase = getSupabaseBrowserClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ account_status: status } as never)
+      .update({ account_status: status })
       .eq("id", id);
 
     if (error) {
@@ -98,7 +95,7 @@ export default function GerenciarUsuariosPage() {
     const supabase = getSupabaseBrowserClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ active } as never)
+      .update({ active })
       .eq("id", id);
 
     if (error) {
@@ -243,17 +240,15 @@ function UserCard({
         {isPending && (
           <>
             <Button
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
+              className="h-9 px-3 bg-green-600 hover:bg-green-700"
               onClick={onApprove}
             >
               <CheckCircle2 size={16} className="mr-1" />
               Aprovar
             </Button>
             <Button
-              size="sm"
               variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50"
+              className="h-9 px-3 border-red-300 text-red-600 hover:bg-red-50"
               onClick={onReject}
             >
               <UserX size={16} className="mr-1" />
@@ -263,7 +258,7 @@ function UserCard({
         )}
         {!isPending && onToggleActive && (
           <Button
-            size="sm"
+            className="h-9 px-3"
             variant={profile.active ? "outline" : "default"}
             onClick={onToggleActive}
           >
