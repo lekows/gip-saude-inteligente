@@ -20,6 +20,7 @@ import {
 import {
   AlertTriangle,
   ClipboardCheck,
+  Mail,
   MapPinned,
   Sparkles,
   Target,
@@ -127,6 +128,12 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/convidar-alunos">
+              <Button variant="outline">
+                <Mail size={17} />
+                Convidar alunos
+              </Button>
+            </Link>
             <Link href="/gerenciar-usuarios">
               <Button variant="outline">
                 <Users size={17} />
