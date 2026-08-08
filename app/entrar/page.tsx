@@ -33,21 +33,38 @@ export default function EntrarPage() {
 
   async function signInWithProvider(provider: "google" | "azure" | "facebook") {
     setLoading(true);
-    setMessage("");
+    setMessage("Abrindo o provedor de acesso...");
+
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectTo = `${window.location.origin}/auth/callback`;
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` }
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
       });
+
       if (error) throw error;
+      if (!data.url) {
+        throw new Error("O provedor não retornou uma URL de autenticação.");
+      }
+
+      // Redirecionamento explícito é mais confiável no Safari/iOS/iPadOS
+      // e em navegadores embutidos (WhatsApp, Instagram etc.).
+      window.location.assign(data.url);
     } catch (error) {
       const providerUnavailable =
         error instanceof Error && error.message.includes("Unsupported provider");
+
       setMessage(
         providerUnavailable
           ? "Este provedor ainda não está habilitado. Use o acesso por e-mail."
-          : "Não foi possível iniciar o acesso. Tente novamente.",
+          : error instanceof Error
+            ? `Não foi possível abrir o acesso: ${error.message}`
+            : "Não foi possível iniciar o acesso. Tente novamente.",
       );
       setLoading(false);
     }
@@ -125,5 +142,5 @@ export default function EntrarPage() {
 }
 
 function ProviderButton({ icon, label, onClick, disabled }: { icon: React.ReactNode; label: string; onClick: () => void; disabled: boolean }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className="inline-flex h-11 items-center justify-center gap-3 rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold hover:border-[#1f7a4d] disabled:opacity-60">{icon}{label}</button>;
+  return <button type="button" onClick={onClick} disabled={disabled} className="inline-flex h-12 touch-manipulation items-center justify-center gap-3 rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold hover:border-[#1f7a4d] active:bg-stone-50 disabled:opacity-60">{icon}{label}</button>;
 }
