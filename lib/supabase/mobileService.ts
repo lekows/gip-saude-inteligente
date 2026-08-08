@@ -1,7 +1,19 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-import type { Database } from "@/types/supabase";
 
-type ScreeningInsert = Database["public"]["Tables"]["clinical_screenings"]["Insert"];
+type ScreeningInsert = {
+  patient_name: string | null;
+  age: number | null;
+  sex: string | null;
+  neighborhood: string | null;
+  has_hypertension: boolean;
+  has_diabetes: boolean;
+  bp_systolic: number | null;
+  bp_diastolic: number | null;
+  blood_glucose: number | null;
+  bmi: number | null;
+  notes: string | null;
+  recorded_by: string | null;
+};
 
 /**
  * Salva uma triagem clínica no Supabase.
@@ -50,7 +62,7 @@ export async function saveScreening(data: {
     throw new Error(`Erro ao salvar triagem: ${error.message}`);
   }
 
-  return result;
+  return result as { id: string } & Record<string, unknown>;
 }
 
 /**
