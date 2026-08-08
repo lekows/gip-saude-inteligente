@@ -25,6 +25,8 @@ type Profile = {
   created_at: string;
 };
 
+type CurrentUserProfile = Pick<Profile, "role">;
+
 export default function GerenciarUsuariosPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -43,11 +45,13 @@ export default function GerenciarUsuariosPage() {
         return;
       }
 
-      const { data: me } = await supabase
+      const { data: meData } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", userData.user.id)
         .single();
+
+      const me = meData as CurrentUserProfile | null;
 
       if (!me || !["administrador", "professor_coordenador"].includes(me.role)) {
         router.replace("/");
@@ -65,7 +69,7 @@ export default function GerenciarUsuariosPage() {
       if (error) {
         setMessage("Erro ao carregar usuários.");
       } else {
-        setProfiles(data ?? []);
+        setProfiles((data ?? []) as Profile[]);
       }
       setLoading(false);
     }
@@ -77,7 +81,7 @@ export default function GerenciarUsuariosPage() {
     const supabase = getSupabaseBrowserClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ account_status: status })
+      .update({ account_status: status } as never)
       .eq("id", id);
 
     if (error) {
@@ -94,7 +98,7 @@ export default function GerenciarUsuariosPage() {
     const supabase = getSupabaseBrowserClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ active })
+      .update({ active } as never)
       .eq("id", id);
 
     if (error) {
