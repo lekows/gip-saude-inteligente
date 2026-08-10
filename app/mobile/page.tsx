@@ -11,7 +11,7 @@ import {
   Radio,
   Send,
   Stethoscope,
-  Save
+  Building2
 } from "lucide-react";
 import { ApproachModal } from "@/components/mobile/ApproachModal";
 import { MainActionButton } from "@/components/mobile/MainActionButton";
@@ -28,6 +28,7 @@ import {
 } from "@/lib/mobileMvpService";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { saveScreening, syncOfflineScreenings } from "@/lib/supabase/mobileService";
+import { getHealthUnits, type HealthUnit } from "@/lib/supabase/healthUnitService";
 import type { ApproachOutcome, OfflineApproachRecord } from "@/types/mobile";
 
 const SimpleRiskMap = dynamic(
@@ -50,6 +51,7 @@ const ACADEMIC_ROLES = [
 const { mission } = getMobileMvpData();
 const queueStorageKey = "gip-mobile-offline-queue";
 const screeningStorageKey = "gip-mobile-offline-screenings";
+const selectedUnitKey = "gip-mobile-selected-unit";
 
 export default function MobilePage() {
   const router = useRouter();
@@ -60,6 +62,9 @@ export default function MobilePage() {
   const [isOnline, setIsOnline] = useState(mission.online);
   const [offlineRecords, setOfflineRecords] = useState<OfflineApproachRecord[]>([]);
   const [offlineScreenings, setOfflineScreenings] = useState<any[]>([]);
+  const [healthUnits, setHealthUnits] = useState<HealthUnit[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<HealthUnit | null>(null);
+  const [loadingUnits, setLoadingUnits] = useState(true);
   const queueSummary = useMemo(() => summarizeOfflineQueue(offlineRecords), [offlineRecords]);
 
   useEffect(() => {
@@ -96,6 +101,32 @@ export default function MobilePage() {
 
   useEffect(() => {
     if (!authChecked) return;
+
+    async function loadUnits() {
+      try {
+        const units = await getHealthUnits();
+        setHealthUnits(units);
+
+        // Restaura unidade selecionada do localStorage
+        const savedUnitId = window.localStorage.getItem(selectedUnitKey);
+        if (savedUnitId) {
+          const saved = units.find((u) => u.id === savedUnitId);
+          if (saved) setSelectedUnit(saved);
+        }
+
+        // Se só tem uma unidade, seleciona automaticamente
+        if (units.length === 1) {
+          setSelectedUnit(units[0]);
+          window.localStorage.setItem(selectedUnitKey, units[0].id);
+        }
+      } catch (err) {
+        setFeedback("Erro ao carregar unidades de saude.");
+      } finally {
+        setLoadingUnits(false);
+      }
+    }
+
+    loadUnits();
 
     setIsOnline(navigator.onLine);
     const stored = window.localStorage.getItem(queueStorageKey);
@@ -134,11 +165,20 @@ export default function MobilePage() {
     window.localStorage.setItem(screeningStorageKey, JSON.stringify(offlineScreenings));
   }, [offlineScreenings]);
 
+  function handleUnitChange(unitId: string) {
+    const unit = healthUnits.find((u) => u.id === unitId);
+    if (unit) {
+      setSelectedUnit(unit);
+      window.localStorage.setItem(selectedUnitKey, unit.id);
+      setFeedback(`Unidade selecionada: ${unit.name}`);
+    }
+  }
+
   function handleOutcome(outcome: ApproachOutcome) {
     const record = createOfflineApproachRecord({
       outcome,
-      missionTitle: mission.title,
-      neighborhood: mission.neighborhood
+      missionTitle: selectedUnit?.name ?? mission.title,
+      neighborhood: selectedUnit?.name ?? mission.neighborhood
     });
 
     setStats((current) => applyApproachOutcome(current, outcome));
@@ -160,11 +200,15 @@ export default function MobilePage() {
     bmi?: number;
     notes?: string;
   }) {
+    const data = {
+      ...screeningData,
+      healthUnitId: selectedUnit?.id,
+    };
+
     if (!isOnline) {
-      // Salva offline
       const offlineRecord = {
         id: crypto.randomUUID(),
-        ...screeningData,
+        ...data,
         createdAt: new Date().toISOString(),
       };
       setOfflineScreenings((current) => [offlineRecord, ...current]);
@@ -173,8 +217,8 @@ export default function MobilePage() {
     }
 
     try {
-      await saveScreening(screeningData);
-      setFeedback("Triagem salva no servidor com sucesso!");
+      await saveScreening(data);
+      setFeedback(`Triagem salva na unidade ${selectedUnit?.name ?? ""}!`);
     } catch (err) {
       setFeedback(`Erro ao salvar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
     }
@@ -184,7 +228,6 @@ export default function MobilePage() {
     setOfflineRecords((current) => markRecordsAsSynced(current));
     setFeedback("Sincronizacao de abordagens simulada concluida.");
 
-    // Sincroniza triagens offline
     if (offlineScreenings.length > 0) {
       try {
         const results = await syncOfflineScreenings(offlineScreenings);
@@ -211,12 +254,19 @@ export default function MobilePage() {
   return (
     <main className="min-h-screen bg-[#f7f7f2] text-ink">
       <section className="mx-auto max-w-md px-4 pb-28 pt-4">
+        {/* Header com seleção de unidade */}
         <header className="rounded-2xl bg-ink p-4 text-white shadow-lg">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">GIP Saude Inteligente</p>
               <h1 className="mt-1 text-3xl font-semibold leading-tight">Busca Ativa</h1>
-              <p className="mt-1 text-sm text-white/75">{mission.neighborhood}</p>
+              {loadingUnits ? (
+                <p className="mt-1 text-sm text-white/75">Carregando unidades...</p>
+              ) : selectedUnit ? (
+                <p className="mt-1 text-sm text-white/75">{selectedUnit.name}</p>
+              ) : (
+                <p className="mt-1 text-sm text-white/75">Selecione uma unidade</p>
+              )}
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
               <Radio size={13} className={isOnline ? "text-green-300" : "text-trigo"} />
@@ -225,10 +275,39 @@ export default function MobilePage() {
           </div>
         </header>
 
+        {/* Seletor de unidade */}
+        <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
+          <label className="flex items-center gap-2 text-sm font-semibold text-stone-700">
+            <Building2 size={16} className="text-folha" />
+            Unidade de saude
+          </label>
+          {loadingUnits ? (
+            <p className="mt-2 text-xs text-stone-500">Carregando...</p>
+          ) : healthUnits.length === 0 ? (
+            <p className="mt-2 text-xs text-stone-500">Nenhuma unidade encontrada.</p>
+          ) : (
+            <select
+              value={selectedUnit?.id ?? ""}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className="mt-2 h-11 w-full rounded-lg border border-stone-300 px-3 text-sm outline-none focus:border-folha"
+            >
+              <option value="">Selecione uma unidade</option>
+              {healthUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {selectedUnit?.address && (
+            <p className="mt-1 text-xs text-stone-500">{selectedUnit.address}</p>
+          )}
+        </div>
+
         <div className="mt-4">
           <MobileMissionCard
             theme={mission.conditionTheme}
-            neighborhood={mission.neighborhood}
+            neighborhood={selectedUnit?.name ?? mission.neighborhood}
             stats={stats}
           />
         </div>
