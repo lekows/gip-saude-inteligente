@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -9,7 +10,8 @@ import {
   Navigation,
   Radio,
   Send,
-  Stethoscope
+  Stethoscope,
+  Building2
 } from "lucide-react";
 import { ApproachModal } from "@/components/mobile/ApproachModal";
 import { MainActionButton } from "@/components/mobile/MainActionButton";
@@ -24,6 +26,9 @@ import {
   markRecordsAsSynced,
   summarizeOfflineQueue
 } from "@/lib/mobileMvpService";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { saveScreening, syncOfflineScreenings } from "@/lib/supabase/mobileService";
+import { getHealthUnits, type HealthUnit } from "@/lib/supabase/healthUnitService";
 import type { ApproachOutcome, OfflineApproachRecord } from "@/types/mobile";
 
 const SimpleRiskMap = dynamic(
@@ -38,22 +43,99 @@ const SimpleRiskMap = dynamic(
   }
 );
 
+const ACADEMIC_ROLES = [
+  "academico_colaborador",
+  "academico_participante",
+];
+
 const { mission } = getMobileMvpData();
 const queueStorageKey = "gip-mobile-offline-queue";
+const screeningStorageKey = "gip-mobile-offline-screenings";
+const selectedUnitKey = "gip-mobile-selected-unit";
 
 export default function MobilePage() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
   const [stats, setStats] = useState(mission.stats);
   const [modalOpen, setModalOpen] = useState(false);
   const [feedback, setFeedback] = useState("Pronto para registrar a proxima abordagem.");
   const [isOnline, setIsOnline] = useState(mission.online);
   const [offlineRecords, setOfflineRecords] = useState<OfflineApproachRecord[]>([]);
+  const [offlineScreenings, setOfflineScreenings] = useState<any[]>([]);
+  const [healthUnits, setHealthUnits] = useState<HealthUnit[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<HealthUnit | null>(null);
+  const [loadingUnits, setLoadingUnits] = useState(true);
   const queueSummary = useMemo(() => summarizeOfflineQueue(offlineRecords), [offlineRecords]);
 
   useEffect(() => {
+    async function checkAuth() {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/entrar?redirect=/mobile");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, account_status, active")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !profile.active || profile.account_status !== "aprovado") {
+        router.replace("/aguardando-aprovacao");
+        return;
+      }
+
+      if (!ACADEMIC_ROLES.includes(profile.role ?? "")) {
+        router.replace("/manager-dashboard");
+        return;
+      }
+
+      setAuthChecked(true);
+    }
+
+    checkAuth();
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
+    async function loadUnits() {
+      try {
+        const units = await getHealthUnits();
+        setHealthUnits(units);
+
+        // Restaura unidade selecionada do localStorage
+        const savedUnitId = window.localStorage.getItem(selectedUnitKey);
+        if (savedUnitId) {
+          const saved = units.find((u) => u.id === savedUnitId);
+          if (saved) setSelectedUnit(saved);
+        }
+
+        // Se só tem uma unidade, seleciona automaticamente
+        if (units.length === 1) {
+          setSelectedUnit(units[0]);
+          window.localStorage.setItem(selectedUnitKey, units[0].id);
+        }
+      } catch (err) {
+        setFeedback("Erro ao carregar unidades de saude.");
+      } finally {
+        setLoadingUnits(false);
+      }
+    }
+
+    loadUnits();
+
     setIsOnline(navigator.onLine);
     const stored = window.localStorage.getItem(queueStorageKey);
     if (stored) {
       setOfflineRecords(JSON.parse(stored) as OfflineApproachRecord[]);
+    }
+    const storedScreenings = window.localStorage.getItem(screeningStorageKey);
+    if (storedScreenings) {
+      setOfflineScreenings(JSON.parse(storedScreenings));
     }
 
     function handleOnline() {
@@ -73,17 +155,30 @@ export default function MobilePage() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [authChecked]);
 
   useEffect(() => {
     window.localStorage.setItem(queueStorageKey, JSON.stringify(offlineRecords));
   }, [offlineRecords]);
 
+  useEffect(() => {
+    window.localStorage.setItem(screeningStorageKey, JSON.stringify(offlineScreenings));
+  }, [offlineScreenings]);
+
+  function handleUnitChange(unitId: string) {
+    const unit = healthUnits.find((u) => u.id === unitId);
+    if (unit) {
+      setSelectedUnit(unit);
+      window.localStorage.setItem(selectedUnitKey, unit.id);
+      setFeedback(`Unidade selecionada: ${unit.name}`);
+    }
+  }
+
   function handleOutcome(outcome: ApproachOutcome) {
     const record = createOfflineApproachRecord({
       outcome,
-      missionTitle: mission.title,
-      neighborhood: mission.neighborhood
+      missionTitle: selectedUnit?.name ?? mission.title,
+      neighborhood: selectedUnit?.name ?? mission.neighborhood
     });
 
     setStats((current) => applyApproachOutcome(current, outcome));
@@ -92,20 +187,86 @@ export default function MobilePage() {
     setFeedback(`${getOutcomeMessage(outcome)} Registro salvo na fila local.`);
   }
 
-  function handleSyncQueue() {
+  async function handleSaveScreening(screeningData: {
+    patientName?: string;
+    age?: number;
+    sex?: string;
+    neighborhood?: string;
+    hasHypertension?: boolean;
+    hasDiabetes?: boolean;
+    bpSystolic?: number;
+    bpDiastolic?: number;
+    bloodGlucose?: number;
+    bmi?: number;
+    notes?: string;
+  }) {
+    const data = {
+      ...screeningData,
+      healthUnitId: selectedUnit?.id,
+    };
+
+    if (!isOnline) {
+      const offlineRecord = {
+        id: crypto.randomUUID(),
+        ...data,
+        createdAt: new Date().toISOString(),
+      };
+      setOfflineScreenings((current) => [offlineRecord, ...current]);
+      setFeedback("Triagem salva localmente. Sincronize quando houver internet.");
+      return;
+    }
+
+    try {
+      await saveScreening(data);
+      setFeedback(`Triagem salva na unidade ${selectedUnit?.name ?? ""}!`);
+    } catch (err) {
+      setFeedback(`Erro ao salvar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+    }
+  }
+
+  async function handleSyncQueue() {
     setOfflineRecords((current) => markRecordsAsSynced(current));
-    setFeedback("Sincronizacao simulada concluida. Registros enviados de forma agregada.");
+    setFeedback("Sincronizacao de abordagens simulada concluida.");
+
+    if (offlineScreenings.length > 0) {
+      try {
+        const results = await syncOfflineScreenings(offlineScreenings);
+        const synced = results.filter((r) => r.status === "synced").length;
+        const errors = results.filter((r) => r.status === "error").length;
+        setOfflineScreenings([]);
+        setFeedback(
+          `Sincronizado! ${synced} triagens enviadas${errors > 0 ? `, ${errors} com erro` : ""}.`
+        );
+      } catch (err) {
+        setFeedback("Erro ao sincronizar triagens. Tente novamente.");
+      }
+    }
+  }
+
+  if (!authChecked) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f7f7f2]">
+        <p className="text-stone-500">Verificando acesso...</p>
+      </main>
+    );
   }
 
   return (
     <main className="min-h-screen bg-[#f7f7f2] text-ink">
       <section className="mx-auto max-w-md px-4 pb-28 pt-4">
+        {/* Header com seleção de unidade */}
         <header className="rounded-2xl bg-ink p-4 text-white shadow-lg">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">GIP Saude Inteligente</p>
               <h1 className="mt-1 text-3xl font-semibold leading-tight">Busca Ativa</h1>
-              <p className="mt-1 text-sm text-white/75">{mission.neighborhood}</p>
+              {loadingUnits ? (
+                <p className="mt-1 text-sm text-white/75">Carregando unidades...</p>
+              ) : selectedUnit ? (
+                <p className="mt-1 text-sm text-white/75">{selectedUnit.name}</p>
+              ) : (
+                <p className="mt-1 text-sm text-white/75">Selecione uma unidade</p>
+              )}
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">
               <Radio size={13} className={isOnline ? "text-green-300" : "text-trigo"} />
@@ -114,10 +275,39 @@ export default function MobilePage() {
           </div>
         </header>
 
+        {/* Seletor de unidade */}
+        <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
+          <label className="flex items-center gap-2 text-sm font-semibold text-stone-700">
+            <Building2 size={16} className="text-folha" />
+            Unidade de saude
+          </label>
+          {loadingUnits ? (
+            <p className="mt-2 text-xs text-stone-500">Carregando...</p>
+          ) : healthUnits.length === 0 ? (
+            <p className="mt-2 text-xs text-stone-500">Nenhuma unidade encontrada.</p>
+          ) : (
+            <select
+              value={selectedUnit?.id ?? ""}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className="mt-2 h-11 w-full rounded-lg border border-stone-300 px-3 text-sm outline-none focus:border-folha"
+            >
+              <option value="">Selecione uma unidade</option>
+              {healthUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {selectedUnit?.address && (
+            <p className="mt-1 text-xs text-stone-500">{selectedUnit.address}</p>
+          )}
+        </div>
+
         <div className="mt-4">
           <MobileMissionCard
             theme={mission.conditionTheme}
-            neighborhood={mission.neighborhood}
+            neighborhood={selectedUnit?.name ?? mission.neighborhood}
             stats={stats}
           />
         </div>
@@ -157,7 +347,7 @@ export default function MobilePage() {
           <OfflineSyncPanel
             isOnline={isOnline}
             records={offlineRecords}
-            pendingCount={queueSummary.pending}
+            pendingCount={queueSummary.pending + offlineScreenings.length}
             onSync={handleSyncQueue}
           />
         </div>
@@ -178,7 +368,7 @@ export default function MobilePage() {
         </section>
 
         <div className="mt-4">
-          <QuickScreeningCard />
+          <QuickScreeningCard onSave={handleSaveScreening} />
         </div>
       </section>
 
