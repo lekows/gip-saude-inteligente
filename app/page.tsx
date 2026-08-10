@@ -1,19 +1,28 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
   ClipboardCheck,
   Database,
   FileUp,
+  HeartPulse,
   LayoutDashboard,
+  LockKeyhole,
+  LogIn,
   Map,
+  MapPinned,
   MonitorCheck,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Target
+  Target,
+  UsersRound
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDataQualityReport } from "@/lib/dataLoaders/dataQualityService";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 const modules = [
   {
@@ -72,7 +81,129 @@ const modules = [
   }
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const access = await getHomeAccess();
+
+  if (!access.approved) {
+    return <PublicHome authenticated={access.authenticated} />;
+  }
+
+  return <OperationalHome />;
+}
+
+async function getHomeAccess() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { authenticated: false, approved: false };
+  }
+
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { authenticated: false, approved: false };
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_status, active")
+      .eq("id", user.id)
+      .single();
+
+    return {
+      authenticated: true,
+      approved: profile?.account_status === "aprovado" && profile.active === true
+    };
+  } catch {
+    return { authenticated: false, approved: false };
+  }
+}
+
+function PublicHome({ authenticated }: { authenticated: boolean }) {
+  const primaryHref = authenticated ? "/aguardando-aprovacao" : "/entrar";
+  const primaryLabel = authenticated ? "Ver status do acesso" : "Entrar no sistema";
+
+  return (
+    <main className="bg-white text-ink">
+      <section className="relative h-[72svh] min-h-[520px] max-h-[720px] overflow-hidden">
+        <Image
+          src="/images/gip-territorial-overview.png"
+          alt="Visão territorial ilustrativa de uma cidade com áreas de prioridade em saúde"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-black/35" />
+        <div className="relative mx-auto flex h-full max-w-[1500px] items-center px-5 py-12 lg:px-10">
+          <div className="max-w-2xl text-white">
+            <div className="flex items-center gap-3 text-sm font-semibold">
+              <span className="grid h-10 w-10 place-items-center bg-folha">
+                <HeartPulse size={21} />
+              </span>
+              Programa de extensão em saúde pública
+            </div>
+            <h1 className="mt-6 text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">
+              GIP Saúde Inteligente
+            </h1>
+            <p className="mt-4 max-w-xl text-lg font-medium leading-7 text-white/90">
+              Gestão, prevenção e inteligência territorial para apoiar o cuidado
+              em saúde pública em Luziânia.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href={primaryHref}
+                className="inline-flex h-12 items-center justify-center gap-2 bg-folha px-5 text-sm font-semibold text-white hover:bg-[#17623d]"
+              >
+                <LogIn size={18} />
+                {primaryLabel}
+              </Link>
+              <Link
+                href="/comunidade"
+                className="inline-flex h-12 items-center justify-center gap-2 border border-white/60 bg-black/20 px-5 text-sm font-semibold text-white hover:bg-black/35"
+              >
+                <UsersRound size={18} />
+                Conhecer o programa
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-stone-200 bg-white">
+        <div className="mx-auto grid max-w-[1200px] gap-6 px-5 py-7 md:grid-cols-3 lg:px-8">
+          <PublicSignal
+            icon={<MapPinned size={20} />}
+            title="Atuação territorial"
+            text="Planejamento por bairros e unidades de saúde."
+          />
+          <PublicSignal
+            icon={<LockKeyhole size={20} />}
+            title="Privacidade"
+            text="Sem pacientes, endereços ou trajetos individuais na área pública."
+          />
+          <PublicSignal
+            icon={<ShieldCheck size={20} />}
+            title="Ambiente demonstrativo"
+            text="Indicadores agregados e dados simulados no MVP."
+          />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PublicSignal({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="flex gap-3">
+      <span className="mt-0.5 text-folha">{icon}</span>
+      <div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        <p className="mt-1 text-sm leading-5 text-stone-600">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function OperationalHome() {
   const report = getDataQualityReport();
 
   return (
