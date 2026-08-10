@@ -1,54 +1,75 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { updateSession, createRedirectWithCookies } from "@/lib/supabase/middleware";
 
-// Rotas públicas (não precisam de login)
-const PUBLIC_PREFIXES = [
-  "/",
-  "/entrar",
-  "/auth",
-  "/comunidade",
-  "/api",
-  "/_next",
-  "/favicon",
-];
+const publicRoutes = ["/entrar", "/auth/callback", "/aguardando-aprovacao", "/comunidade", "/"];
 
-// Rotas que qualquer usuário logado pode acessar
-const AUTHENTICATED_ONLY = [
-  "/aguardando-aprovacao",
-];
+export async function middleware(request: NextRequest) {
+  const { supabaseResponse, user, supabase } = await updateSession(request);
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const url = request.nextUrl.clone();
+  const path = url.pathname;
 
-  // Libera rotas públicas
-  if (PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return NextResponse.next();
+  // Ignorar arquivos estáticos e otimizados pelo Next.js
+  if (path.startsWith("/_next") || path.match(/\.(.*)$/)) {
+    return supabaseResponse;
   }
 
-  // Libera assets estáticos
-  if (/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|json)$/.test(pathname)) {
-    return NextResponse.next();
+  const isPublicRoute = publicRoutes.includes(path);
+
+  // 1. Caso o usuário NÃO esteja autenticado
+  if (!user || !supabase) {
+    if (!isPublicRoute) {
+      url.pathname = "/entrar";
+      return createRedirectWithCookies(request, url, supabaseResponse);
+    }
+    return supabaseResponse;
   }
 
-  // Verifica se existe token de auth do Supabase no cookie
-  const hasToken = request.cookies.has("sb-qkevrhbxysijtlrkianb-auth-token");
+  // 2. Se o usuário ESTIVER autenticado, buscamos o perfil para autorização
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, account_status, active")
+    .eq("id", user.id)
+    .single();
 
-  if (!hasToken) {
-    const loginUrl = new URL("/entrar", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+  // Sem perfil cadastrado
+  if (!profile) {
+    if (!isPublicRoute) {
+      url.pathname = "/aguardando-aprovacao";
+      return createRedirectWithCookies(request, url, supabaseResponse);
+    }
+    return supabaseResponse;
   }
 
-  // Token existe: libera acesso por enquanto.
-  // A verificação detalhada de role e aprovação é feita
-  // no callback de auth e nos componentes das páginas protegidas.
-  if (AUTHENTICATED_ONLY.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
-    return NextResponse.next();
+  const isApproved = profile.account_status === "aprovado" && profile.active === true;
+
+  // 3. Usuário NÃO aprovado ou suspenso
+  if (!isApproved) {
+    // Se tentar acessar rota protegida ou /entrar, redireciona para /aguardando-aprovacao
+    if (!isPublicRoute || path === "/entrar") {
+      url.pathname = "/aguardando-aprovacao";
+      return createRedirectWithCookies(request, url, supabaseResponse);
+    }
+    return supabaseResponse;
   }
 
-  return NextResponse.next();
+  // 4. Usuário APROVADO: retira das páginas de entrada/espera
+  if (path === "/entrar" || path === "/aguardando-aprovacao") {
+    url.pathname = "/manager-dashboard";
+    return createRedirectWithCookies(request, url, supabaseResponse);
+  }
+
+  // 5. Bloqueia rotas administrativas se não for administrador
+  if (path.startsWith("/admin") && profile.role !== "administrador") {
+    url.pathname = "/manager-dashboard";
+    return createRedirectWithCookies(request, url, supabaseResponse);
+  }
+
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
 };
