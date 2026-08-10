@@ -5,6 +5,7 @@ type ScreeningInsert = {
   age: number | null;
   sex: string | null;
   neighborhood: string | null;
+  health_unit_id: string | null;
   has_hypertension: boolean;
   has_diabetes: boolean;
   bp_systolic: number | null;
@@ -24,6 +25,7 @@ export async function saveScreening(data: {
   age?: number;
   sex?: string;
   neighborhood?: string;
+  healthUnitId?: string;
   hasHypertension?: boolean;
   hasDiabetes?: boolean;
   bpSystolic?: number;
@@ -42,6 +44,7 @@ export async function saveScreening(data: {
     age: data.age ?? null,
     sex: data.sex || null,
     neighborhood: data.neighborhood || null,
+    health_unit_id: data.healthUnitId || null,
     has_hypertension: data.hasHypertension ?? false,
     has_diabetes: data.hasDiabetes ?? false,
     bp_systolic: data.bpSystolic ?? null,
@@ -102,6 +105,7 @@ export async function syncOfflineScreenings(
     age?: number;
     sex?: string;
     neighborhood?: string;
+    healthUnitId?: string;
     hasHypertension?: boolean;
     hasDiabetes?: boolean;
     bpSystolic?: number;
@@ -126,6 +130,7 @@ export async function syncOfflineScreenings(
         age: record.age,
         sex: record.sex,
         neighborhood: record.neighborhood,
+        healthUnitId: record.healthUnitId,
         hasHypertension: record.hasHypertension,
         hasDiabetes: record.hasDiabetes,
         bpSystolic: record.bpSystolic,
