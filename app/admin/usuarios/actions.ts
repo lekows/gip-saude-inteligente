@@ -4,8 +4,6 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { VALID_ROLES, VALID_STATUSES, AppRole, AccountStatus } from "@/lib/auth/constants";
 
-export { VALID_ROLES, VALID_STATUSES };
-
 /**
  * Valida centralizadamente a sessão do administrador antes de qualquer ação administrativa.
  */
