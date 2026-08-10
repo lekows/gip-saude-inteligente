@@ -2,12 +2,10 @@ import { getSupabaseBrowserClient } from "./browser";
 
 export type ScreeningInput = {
   patientCode?: string;
-  patientName?: string;
   age?: number;
   sex?: string;
   neighborhood?: string;
   healthUnitId?: string;
-  location?: string;
   hasHypertension?: boolean;
   hasDiabetes?: boolean;
   hasRespiratory?: boolean;
@@ -31,12 +29,10 @@ export async function saveScreening(input: ScreeningInput) {
     .from("clinical_screenings")
     .insert({
       patient_code: input.patientCode,
-      patient_name: input.patientName,
       age: input.age,
       sex: input.sex,
       neighborhood: input.neighborhood,
       health_unit_id: input.healthUnitId,
-      location: input.location,
       has_hypertension: input.hasHypertension,
       has_diabetes: input.hasDiabetes,
       has_respiratory: input.hasRespiratory,

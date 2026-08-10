@@ -4,13 +4,6 @@ import { ManagerDashboardClient } from "@/components/dashboard/ManagerDashboardC
 import { loadSusDataset } from "@/lib/dataLoaders/susFileRepository";
 import { susToManagerDashboardData } from "@/lib/dataLoaders/susAdapters";
 
-const MANAGER_ROLES = [
-  "administrador",
-  "professor_coordenador",
-  "professor_colaborador",
-  "gestor_municipal",
-];
-
 export default async function ManagerDashboardPage() {
   const supabase = await getSupabaseServerClient();
 
@@ -32,10 +25,6 @@ export default async function ManagerDashboardPage() {
 
   if (!profile.active || profile.account_status !== "aprovado") {
     redirect("/aguardando-aprovacao");
-  }
-
-  if (!MANAGER_ROLES.includes(profile.role ?? "")) {
-    redirect("/mobile");
   }
 
   const susDataset = loadSusDataset();

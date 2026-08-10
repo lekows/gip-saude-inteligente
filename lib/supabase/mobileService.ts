@@ -1,7 +1,6 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type ScreeningInsert = {
-  patient_name: string | null;
   age: number | null;
   sex: string | null;
   neighborhood: string | null;
@@ -21,7 +20,6 @@ type ScreeningInsert = {
  * Usa o ID do usuário logado como recorded_by.
  */
 export async function saveScreening(data: {
-  patientName?: string;
   age?: number;
   sex?: string;
   neighborhood?: string;
@@ -40,7 +38,6 @@ export async function saveScreening(data: {
   const userId = userData.user?.id ?? null;
 
   const insertData: ScreeningInsert = {
-    patient_name: data.patientName || null,
     age: data.age ?? null,
     sex: data.sex || null,
     neighborhood: data.neighborhood || null,
@@ -101,7 +98,6 @@ export async function getMyScreenings() {
 export async function syncOfflineScreenings(
   offlineRecords: Array<{
     id: string;
-    patientName?: string;
     age?: number;
     sex?: string;
     neighborhood?: string;
@@ -126,7 +122,6 @@ export async function syncOfflineScreenings(
   for (const record of offlineRecords) {
     try {
       const result = await saveScreening({
-        patientName: record.patientName,
         age: record.age,
         sex: record.sex,
         neighborhood: record.neighborhood,

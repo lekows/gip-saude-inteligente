@@ -86,7 +86,7 @@ export async function updateUserStatus(userId: string, status: string, active: b
       }
     }
 
-    // 5. Atualização atômica via RPC ou fallback com log obrigatório
+    // 5. Atualização atômica obrigatória via RPC auditada
     const { error: rpcError } = await supabase.rpc("admin_update_profile_status", {
       p_target_id: userId,
       p_status: status,
@@ -94,24 +94,7 @@ export async function updateUserStatus(userId: string, status: string, active: b
     });
 
     if (rpcError) {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ account_status: status, active, updated_at: new Date().toISOString() })
-        .eq("id", userId);
-
-      if (updateError) return { error: updateError.message };
-
-      const { error: auditError } = await supabase.from("audit_logs").insert({
-        actor_id: currentAdmin.id,
-        action: "update_status",
-        entity_type: "profile",
-        entity_id: userId,
-        metadata: { status, active },
-      });
-
-      if (auditError) {
-        console.error("Falha crítica ao gravar audit log:", auditError.message);
-      }
+      return { error: rpcError.message };
     }
 
     revalidatePath("/admin/usuarios");
@@ -144,31 +127,14 @@ export async function updateUserRole(userId: string, newRole: string) {
       }
     }
 
-    // 5. Atualização atômica via RPC ou fallback com log obrigatório
+    // 5. Atualização atômica obrigatória via RPC auditada
     const { error: rpcError } = await supabase.rpc("admin_update_profile_role", {
       p_target_id: userId,
       p_role: newRole,
     });
 
     if (rpcError) {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ role: newRole, updated_at: new Date().toISOString() })
-        .eq("id", userId);
-
-      if (updateError) return { error: updateError.message };
-
-      const { error: auditError } = await supabase.from("audit_logs").insert({
-        actor_id: currentAdmin.id,
-        action: "update_role",
-        entity_type: "profile",
-        entity_id: userId,
-        metadata: { role: newRole },
-      });
-
-      if (auditError) {
-        console.error("Falha crítica ao gravar audit log:", auditError.message);
-      }
+      return { error: rpcError.message };
     }
 
     revalidatePath("/admin/usuarios");

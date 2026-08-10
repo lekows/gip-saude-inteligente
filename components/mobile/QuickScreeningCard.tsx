@@ -15,7 +15,6 @@ const riskStyles: Record<ScreeningRisk, string> = {
 
 type QuickScreeningCardProps = {
   onSave?: (data: {
-    patientName?: string;
     age?: number;
     sex?: string;
     neighborhood?: string;
@@ -30,7 +29,6 @@ type QuickScreeningCardProps = {
 };
 
 export function QuickScreeningCard({ onSave }: QuickScreeningCardProps = {}) {
-  const [patientName, setPatientName] = useState("");
   const [age, setAge] = useState("");
   const [sex, setSex] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
@@ -64,7 +62,6 @@ export function QuickScreeningCard({ onSave }: QuickScreeningCardProps = {}) {
     setSaving(true);
     try {
       await onSave({
-        patientName: patientName || undefined,
         age: age ? parseInt(age, 10) : undefined,
         sex: sex || undefined,
         neighborhood: neighborhood || undefined,
@@ -76,7 +73,6 @@ export function QuickScreeningCard({ onSave }: QuickScreeningCardProps = {}) {
         notes: [complaint, needsReferral ? "Encaminhamento necessario" : ""].filter(Boolean).join(". ") || undefined,
       });
       setSubmitted(false);
-      setPatientName("");
       setAge("");
       setSex("");
       setNeighborhood("");
@@ -100,15 +96,6 @@ export function QuickScreeningCard({ onSave }: QuickScreeningCardProps = {}) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Field label="Nome do paciente (opcional)">
-          <input
-            value={patientName}
-            onChange={(event) => setPatientName(event.target.value)}
-            placeholder="Ex: Maria Silva"
-            className="h-12 w-full rounded-lg border border-stone-300 px-3 text-base outline-none focus:border-folha"
-          />
-        </Field>
-
         <div className="grid grid-cols-2 gap-3">
           <Field label="Idade">
             <input

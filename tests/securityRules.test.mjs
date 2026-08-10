@@ -18,6 +18,14 @@ const supabaseMiddlewareSource = readFileSync(
   new URL("../lib/supabase/middleware.ts", import.meta.url),
   "utf8",
 );
+const mobileScreeningSource = readFileSync(
+  new URL("../components/mobile/QuickScreeningCard.tsx", import.meta.url),
+  "utf8",
+);
+const adminActionsSource = readFileSync(
+  new URL("../app/admin/usuarios/actions.ts", import.meta.url),
+  "utf8",
+);
 
 test("auth callback route exchanges code for session", () => {
   assert.match(callbackSource, /exchangeCodeForSession\(/);
@@ -42,4 +50,13 @@ test("OAuth buttons require an explicit provider flag", () => {
   assert.match(loginSource, /NEXT_PUBLIC_SUPABASE_AUTH_AZURE_ENABLED/);
   assert.match(loginSource, /NEXT_PUBLIC_SUPABASE_AUTH_FACEBOOK_ENABLED/);
   assert.match(loginSource, /\.filter\(\(\{ enabled \}\) => enabled\)/);
+});
+
+test("triagem mobile nao coleta nome de paciente", () => {
+  assert.doesNotMatch(mobileScreeningSource, /patientName|Nome do paciente/i);
+});
+
+test("acoes administrativas nao fazem fallback para update direto em profiles", () => {
+  assert.match(adminActionsSource, /supabase\.rpc\("admin_update_profile_/);
+  assert.doesNotMatch(adminActionsSource, /\.from\("profiles"\)\s*\.update\(/s);
 });
