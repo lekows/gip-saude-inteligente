@@ -17,11 +17,14 @@
   - `role = 'administrador'`
   - `account_status = 'aprovado'`
   - `active = true`
+- A alteracao privilegiada ocorre em uma transacao controlada e registra
+  `bootstrap_first_admin` em `audit_logs`
 - **Query 4**: Confirma que tudo foi aplicado corretamente
 
 ## Depois de executar
 
 1. Acesse: https://gip-saude-inteligente.vercel.app/entrar
 2. Faça login com Google
-3. Você será redirecionado para `/manager-dashboard` (não mais `/aguardando-aprovacao`)
+3. No computador, você será direcionado para `/manager-dashboard`; no celular,
+   para `/mobile`
 4. No dashboard, clique em **"Gerenciar usuários"** para aprovar outros alunos

@@ -19,6 +19,10 @@ SELECT * FROM public.profiles WHERE email = 'lekows@gmail.com';
 
 -- Passo 3: Criar ou atualizar o perfil como administrador aprovado
 -- (Execute APENAS se o Passo 1 retornar um resultado)
+BEGIN;
+
+SELECT set_config('app.admin_profile_write', 'on', true);
+
 INSERT INTO public.profiles (
     id,
     email,
@@ -54,6 +58,18 @@ ON CONFLICT (id) DO UPDATE SET
     account_status = 'aprovado',
     active = true,
     updated_at = NOW();
+
+INSERT INTO public.audit_logs (actor_id, action, entity_type, entity_id, metadata)
+SELECT
+    id,
+    'bootstrap_first_admin',
+    'profile',
+    id::text,
+    jsonb_build_object('role', 'administrador', 'account_status', 'aprovado')
+FROM public.profiles
+WHERE email = 'lekows@gmail.com';
+
+COMMIT;
 
 -- Passo 4: Confirmar que o perfil foi criado/atualizado corretamente
 SELECT 

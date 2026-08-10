@@ -1,4 +1,26 @@
--- Migration: Atomic profile status & role updates with mandatory audit logging
+-- Require privileged profile fields to be changed through audited admin RPCs.
+
+create or replace function public.protect_profile_privileges()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.role is distinct from old.role
+     or new.organization_id is distinct from old.organization_id
+     or new.active is distinct from old.active
+     or new.account_status is distinct from old.account_status then
+    if coalesce(current_setting('app.admin_profile_write', true), '') is distinct from 'on' then
+      raise exception 'Papel, organizacao, aprovacao e ativacao so podem ser alterados pelas funcoes administrativas auditadas.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.protect_profile_privileges() from public, anon, authenticated;
 
 create or replace function public.admin_update_profile_status(
   p_target_id uuid,
@@ -17,7 +39,7 @@ declare
   v_actor_active boolean;
 begin
   if v_actor_id is null then
-    raise exception 'Autenticação necessária.';
+    raise exception 'Autenticacao necessaria.';
   end if;
 
   select role, account_status, active
@@ -25,11 +47,14 @@ begin
   from public.profiles
   where id = v_actor_id;
 
-  if v_actor_status is distinct from 'aprovado' or v_actor_active is not true or v_actor_role is distinct from 'administrador' then
-    raise exception 'Acesso não autorizado. Apenas administradores ativos e aprovados podem realizar esta ação.';
+  if v_actor_status is distinct from 'aprovado'
+     or v_actor_active is not true
+     or v_actor_role is distinct from 'administrador' then
+    raise exception 'Acesso nao autorizado.';
   end if;
 
-  -- 1. Atualizar o perfil
+  perform set_config('app.admin_profile_write', 'on', true);
+
   update public.profiles
   set account_status = p_status,
       active = p_active,
@@ -37,10 +62,9 @@ begin
   where id = p_target_id;
 
   if not found then
-    raise exception 'Usuário não encontrado.';
+    raise exception 'Usuario nao encontrado.';
   end if;
 
-  -- 2. Inserir log de auditoria no mesmo bloco transacional
   insert into public.audit_logs (actor_id, action, entity_type, entity_id, metadata)
   values (
     v_actor_id,
@@ -70,7 +94,7 @@ declare
   v_actor_active boolean;
 begin
   if v_actor_id is null then
-    raise exception 'Autenticação necessária.';
+    raise exception 'Autenticacao necessaria.';
   end if;
 
   select role, account_status, active
@@ -78,21 +102,23 @@ begin
   from public.profiles
   where id = v_actor_id;
 
-  if v_actor_status is distinct from 'aprovado' or v_actor_active is not true or v_actor_role is distinct from 'administrador' then
-    raise exception 'Acesso não autorizado. Apenas administradores ativos e aprovados podem realizar esta ação.';
+  if v_actor_status is distinct from 'aprovado'
+     or v_actor_active is not true
+     or v_actor_role is distinct from 'administrador' then
+    raise exception 'Acesso nao autorizado.';
   end if;
 
-  -- 1. Atualizar o papel
+  perform set_config('app.admin_profile_write', 'on', true);
+
   update public.profiles
   set role = p_role,
       updated_at = now()
   where id = p_target_id;
 
   if not found then
-    raise exception 'Usuário não encontrado.';
+    raise exception 'Usuario nao encontrado.';
   end if;
 
-  -- 2. Inserir log de auditoria no mesmo bloco transacional
   insert into public.audit_logs (actor_id, action, entity_type, entity_id, metadata)
   values (
     v_actor_id,
@@ -105,6 +131,3 @@ begin
   return true;
 end;
 $$;
-
-grant execute on function public.admin_update_profile_status(uuid, public.account_status, boolean) to authenticated;
-grant execute on function public.admin_update_profile_role(uuid, public.app_role) to authenticated;

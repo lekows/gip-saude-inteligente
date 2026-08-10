@@ -2,6 +2,30 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createRedirectWithCookies } from "../lib/supabase/middleware.ts";
 import { VALID_ROLES, VALID_STATUSES } from "../lib/auth/constants.ts";
+import { detectAccessDevice, getAuthenticatedHome } from "../lib/auth/accessDestination.ts";
+
+test("entrada autenticada usa o dispositivo apenas para escolher a experiencia inicial", () => {
+  const mobileHeaders = new Headers({
+    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile",
+  });
+  const desktopHeaders = new Headers({
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  });
+
+  assert.equal(detectAccessDevice(mobileHeaders), "mobile");
+  assert.equal(getAuthenticatedHome(mobileHeaders), "/mobile");
+  assert.equal(detectAccessDevice(desktopHeaders), "desktop");
+  assert.equal(getAuthenticatedHome(desktopHeaders), "/manager-dashboard");
+});
+
+test("Client Hint de dispositivo tem prioridade sobre User-Agent", () => {
+  const headers = new Headers({
+    "sec-ch-ua-mobile": "?1",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  });
+
+  assert.equal(getAuthenticatedHome(headers), "/mobile");
+});
 
 test("createRedirectWithCookies preserva e propaga todos os cookies de sessão no redirecionamento", () => {
   const mockReq = {

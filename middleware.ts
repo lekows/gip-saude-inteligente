@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession, createRedirectWithCookies } from "@/lib/supabase/middleware";
+import { getAuthenticatedHome } from "@/lib/auth/accessDestination";
 
 const publicRoutes = ["/entrar", "/auth/callback", "/aguardando-aprovacao", "/comunidade", "/"];
 
@@ -55,7 +56,7 @@ export async function middleware(request: NextRequest) {
 
   // 4. Usuário APROVADO: retira das páginas de entrada/espera
   if (path === "/entrar" || path === "/aguardando-aprovacao") {
-    url.pathname = "/manager-dashboard";
+    url.pathname = getAuthenticatedHome(request.headers);
     return createRedirectWithCookies(request, url, supabaseResponse);
   }
 

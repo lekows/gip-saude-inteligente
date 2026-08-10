@@ -180,6 +180,10 @@ primeiro definir uma unica regra de produto e atualizar testes e documentacao.
 
 ## 8. Seguranca ja implementada
 
+Atualizacao de 10 de agosto de 2026: a fundacao SSR da Sprint 1 foi implementada.
+Consulte `docs/SPRINT_1_AUTH_EVIDENCIAS.md` para a matriz de aceite e os passos
+restantes de encerramento formal.
+
 - RLS habilitado nas tabelas expostas.
 - Usuarios pendentes nao leem tabelas internas.
 - Funcoes `security definer` sensiveis foram removidas da API publica ou
@@ -187,11 +191,15 @@ primeiro definir uma unica regra de produto e atualizar testes e documentacao.
 - `claim_first_admin` foi removida.
 - Arquivos do bucket `gip-evidencias` sao limitados ao dono ou gestor.
 - Logs de auditoria exigem `actor_id = auth.uid()`.
+- Alteracoes administrativas usam RPCs atomicas `security invoker`.
+- Colunas privilegiadas de perfil nao aceitam `PATCH` direto.
+- Triagens nao coletam nome nem coordenada residencial individual.
 - Callback usa `supabase.auth.getUser()`, nao confia apenas na sessao local.
 - Callback consulta `account_status`.
 - Provedores OAuth so aparecem com flag explicita.
-- Ultima auditoria registrada: zero alertas de seguranca do Supabase e zero
-  vulnerabilidades npm.
+- Ultima auditoria registrada: zero alertas de RLS ou funcoes privilegiadas e
+  zero vulnerabilidades npm. O painel Auth ainda recomenda ativar a protecao
+  opcional contra senhas vazadas.
 
 Migracoes:
 
@@ -201,42 +209,38 @@ Migracoes:
 20260727195019_profile_approval_and_permissions.sql
 20260729023741_harden_auth_rls.sql
 20260729024332_optimize_foreign_key_indexes.sql
+20260804225844_create_patients_and_screenings.sql
+20260810171657_admin_update_profile_atomic.sql
+20260810185741_harden_profile_admin_columns_guard.sql
+20260810224727_secure_admin_rpcs_and_clinical_privacy.sql
 ```
 
 Nao editar migracoes ja aplicadas. Criar uma nova migracao para qualquer mudanca.
 
-## 9. Lacuna critica atual
+## 9. Estado atual
 
-A autenticacao existe, mas a aplicacao ainda usa apenas cliente Supabase no
-navegador. Nao existe uma camada completa de sessao server-side protegendo as
-rotas internas. Varias telas operacionais ainda podem ser abertas diretamente
-sem verificacao de perfil.
+A autenticacao server-side, a protecao de rotas, o logout, a aprovacao de contas
+e a auditoria administrativa estao implementados. O fechamento formal depende
+do PR, do deploy e do teste final em celular e computador descritos em
+`docs/SPRINT_1_AUTH_EVIDENCIAS.md`.
 
-Essa e a proxima tarefa, antes de CRUD, IA real ou importacao de dados reais.
+O dispositivo escolhe somente a tela inicial. Aprovacao, papel e permissoes
+continuam definindo quais operacoes o usuario pode executar.
 
 ## 10. Proxima entrega recomendada
 
 ### Objetivo
 
-Entregar autenticacao e autorizacao de producao para a Sprint 1.
+Iniciar os cadastros operacionais da Sprint 1 sem ampliar o uso de dados reais.
 
 ### Escopo
 
-1. Adicionar integracao SSR oficial do Supabase compatível com Next.js 15.
-2. Criar clientes Supabase separados para browser e servidor.
-3. Renovar a sessao por middleware/proxy sem expor credenciais.
-4. Definir claramente rotas publicas e internas.
-5. Bloquear conta `pendente`, `suspenso` ou `active = false`.
-6. Implementar logout.
-7. Exibir navegacao conforme papel e permissoes.
-8. Criar pagina administrativa para:
-   - listar perfis;
-   - aprovar ou suspender;
-   - atribuir papel;
-   - delegar permissoes;
-   - registrar a acao em auditoria.
-9. Manter o bootstrap manual documentado para o primeiro administrador.
-10. Adicionar testes de autenticacao, autorizacao e regressao de RLS.
+1. CRUD de ciclos, equipes, unidades e vinculos de participantes.
+2. Calendario de capacitacoes e atividades de campo.
+3. Registro de presenca e carga horaria.
+4. Catalogo de modulos de capacitacao.
+5. Upload de evidencias com metadados, autorizacao e auditoria.
+6. Exportacao institucional agregada.
 
 ### Rotas publicas minimas
 

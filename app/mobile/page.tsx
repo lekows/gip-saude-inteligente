@@ -43,11 +43,6 @@ const SimpleRiskMap = dynamic(
   }
 );
 
-const ACADEMIC_ROLES = [
-  "academico_colaborador",
-  "academico_participante",
-];
-
 const { mission } = getMobileMvpData();
 const queueStorageKey = "gip-mobile-offline-queue";
 const screeningStorageKey = "gip-mobile-offline-screenings";
@@ -85,11 +80,6 @@ export default function MobilePage() {
 
       if (!profile || !profile.active || profile.account_status !== "aprovado") {
         router.replace("/aguardando-aprovacao");
-        return;
-      }
-
-      if (!ACADEMIC_ROLES.includes(profile.role ?? "")) {
-        router.replace("/manager-dashboard");
         return;
       }
 
@@ -188,7 +178,6 @@ export default function MobilePage() {
   }
 
   async function handleSaveScreening(screeningData: {
-    patientName?: string;
     age?: number;
     sex?: string;
     neighborhood?: string;
