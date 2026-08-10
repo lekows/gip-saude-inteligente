@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateUserStatus, updateUserRole } from "./actions";
-import { CheckCircle, Ban, Loader2 } from "lucide-react";
+import { CheckCircle, Ban, Loader2, AlertTriangle } from "lucide-react";
 
 type User = {
   id: string;
@@ -13,30 +14,66 @@ type User = {
   active: boolean;
 };
 
+type Feedback = { kind: "success" | "error"; text: string } | null;
+
 export function UserRow({ user, currentUserId }: { user: User; currentUserId: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(user.role);
+  const [feedback, setFeedback] = useState<Feedback>(null);
   const isSelf = user.id === currentUserId;
 
-  async function handleApprove() {
+  async function runAction(
+    action: () => Promise<{ error?: string; success?: boolean } | void>,
+    successText: string
+  ) {
     setLoading(true);
-    await updateUserStatus(user.id, "aprovado", true);
-    setLoading(false);
+    setFeedback(null);
+    try {
+      const result = await action();
+      if (result && "error" in result && result.error) {
+        setFeedback({ kind: "error", text: result.error });
+      } else {
+        setFeedback({ kind: "success", text: successText });
+        router.refresh();
+      }
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        text: error instanceof Error ? error.message : "Erro inesperado ao executar a ação.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleApprove() {
+    await runAction(
+      () => updateUserStatus(user.id, "aprovado", true),
+      "Usuário aprovado com sucesso."
+    );
   }
 
   async function handleSuspend() {
     if (!confirm("Tem certeza que deseja suspender este usuário?")) return;
-    setLoading(true);
-    await updateUserStatus(user.id, "suspenso", false);
-    setLoading(false);
+    await runAction(
+      () => updateUserStatus(user.id, "suspenso", false),
+      "Usuário suspenso."
+    );
   }
 
   async function handleRoleChange(newRole: string) {
+    setSelectedRole(newRole);
     if (newRole === user.role) return;
-    if (!confirm(`Alterar o papel deste usuário para ${newRole}?`)) return;
-    
-    setLoading(true);
-    await updateUserRole(user.id, newRole);
-    setLoading(false);
+    if (!confirm(`Alterar o papel deste usuário para ${newRole}?`)) {
+      setSelectedRole(user.role);
+      return;
+    }
+
+    await runAction(
+      () => updateUserRole(user.id, newRole),
+      `Papel alterado para ${newRole}.`
+    );
   }
 
   return (
@@ -48,7 +85,7 @@ export function UserRow({ user, currentUserId }: { user: User; currentUserId: st
       <td className="px-6 py-4">
         <select
           disabled={loading || isSelf}
-          value={user.role}
+          value={selectedRole}
           onChange={(e) => handleRoleChange(e.target.value)}
           className="bg-stone-50 border border-stone-200 text-stone-700 text-xs rounded focus:ring-[#1f7a4d] focus:border-[#1f7a4d] block w-full p-2 disabled:opacity-50"
         >
@@ -62,15 +99,28 @@ export function UserRow({ user, currentUserId }: { user: User; currentUserId: st
       </td>
       <td className="px-6 py-4">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-          user.account_status === "aprovado" 
-            ? "bg-green-100 text-green-700" 
-            : user.account_status === "suspenso" 
-            ? "bg-red-100 text-red-700" 
+          user.account_status === "aprovado"
+            ? "bg-green-100 text-green-700"
+            : user.account_status === "suspenso"
+            ? "bg-red-100 text-red-700"
             : "bg-yellow-100 text-yellow-700"
         }`}>
           {user.account_status === "aprovado" ? <CheckCircle size={14} /> : user.account_status === "suspenso" ? <Ban size={14} /> : <Loader2 size={14} className="animate-spin" />}
           {user.account_status.charAt(0).toUpperCase() + user.account_status.slice(1)}
         </span>
+        {feedback && (
+          <div
+            className={`mt-2 flex items-start gap-1.5 rounded-md px-2 py-1.5 text-xs leading-4 ${
+              feedback.kind === "success"
+                ? "bg-green-50 text-green-800"
+                : "bg-red-50 text-red-800"
+            }`}
+          >
+            {feedback.kind === "error" && <AlertTriangle size={13} className="mt-0.5 shrink-0" />}
+            {feedback.kind === "success" && <CheckCircle size={13} className="mt-0.5 shrink-0" />}
+            <span>{feedback.text}</span>
+          </div>
+        )}
       </td>
       <td className="px-6 py-4 text-right">
         {loading ? (
