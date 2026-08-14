@@ -112,8 +112,8 @@ export default function DataHubPage() {
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <MiniMetric label="Arquivos" value={report.files.length} />
                 <MiniMetric label="Registros" value={totalRecords.toLocaleString("pt-BR")} />
-                <MiniMetric label="Bairros" value={report.coverage.neighborhoodsWithGeo} />
-                <MiniMetric label="Unidades" value={report.coverage.totalHealthUnits} />
+                <MiniMetric label="Fontes oficiais" value={report.officialSourceCount} />
+                <MiniMetric label="A homologar" value={report.pendingHomologationCount} />
               </div>
             </CardContent>
           </Card>

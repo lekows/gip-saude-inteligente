@@ -19,9 +19,13 @@ import {
 } from "recharts";
 import {
   AlertTriangle,
+  Building2,
   ClipboardCheck,
+  Database,
   Mail,
+  Map,
   MapPinned,
+  ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
@@ -124,7 +128,8 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
               Visao executiva com metas, cadastros, triagens, risco territorial,
-              mutiroes e priorizacao por dados mockados e agregados.
+              mutiroes e priorizacao com unidades oficiais do CNES e indicadores
+              territoriais agregados ou simulados.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -146,6 +151,8 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
             </Button>
           </div>
         </div>
+
+        <OfficialEvidencePanel data={data} mounted={mounted} />
 
         <Card className="mt-6">
           <CardContent className="grid gap-3 pt-5 md:grid-cols-2 xl:grid-cols-5">
@@ -311,10 +318,286 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
         </section>
 
         <div className="mt-5">
-          <ManagerTerritorialMapClient areas={filteredAreas.length ? filteredAreas : enrichedAreas} />
+          <ManagerTerritorialMapClient
+            areas={filteredAreas.length ? filteredAreas : enrichedAreas}
+            units={data.units}
+            officialEvidence={data.officialEvidence}
+          />
         </div>
       </section>
     </main>
+  );
+}
+
+function OfficialEvidencePanel({
+  data,
+  mounted
+}: {
+  data: ManagerDashboardData;
+  mounted: boolean;
+}) {
+  const evidence = data.officialEvidence;
+  const [territorialMetric, setTerritorialMetric] = useState<
+    "coverage" | "vulnerability"
+  >("coverage");
+  const indicatorLabels: Record<string, string> = {
+    "10": "Pre-natal",
+    "20": "Sifilis e HIV",
+    "30": "Saude bucal",
+    "40": "Citopatologico",
+    "50": "Vacinacao infantil",
+    "70": "Diabetes / HbA1c"
+  };
+  const indicatorData = evidence.sisabIndicators.map((indicator) => ({
+    name: indicatorLabels[indicator.indicatorCode] ?? indicator.indicatorName,
+    resultado: indicator.resultPercent,
+    numerador: indicator.numerator,
+    denominador: indicator.denominator
+  }));
+  const territorialDistribution =
+    territorialMetric === "coverage"
+      ? evidence.census.priorityDistribution
+      : evidence.census.vulnerabilityDistribution;
+  const priorityData = territorialDistribution.map((item) => ({
+    name:
+      item.level === "verde"
+        ? "Menor"
+        : item.level === "amarelo"
+          ? "Moderada"
+          : "Maior",
+    value: item.value,
+    color: riskColors[item.level]
+  }));
+
+  return (
+    <section className="mt-6 border-y border-stone-200 bg-white px-4 py-5 sm:px-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-folha">
+            <ShieldCheck size={16} />
+            Evidencia oficial disponivel
+          </div>
+          <h2 className="mt-2 text-xl font-semibold">Raio-X territorial de Luziania</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-600">
+            Rede CNES, demografia e caracteristicas domiciliares do IBGE sao oficiais.
+            Os scores de cobertura e vulnerabilidade sao calculos explicaveis do GIP;
+            nao representam risco clinico.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <Badge className="border-green-200 bg-green-50 text-folha">CNES oficial</Badge>
+          <Badge className="border-blue-200 bg-blue-50 text-[#1c5f9f]">IBGE Censo 2022</Badge>
+          <Badge className="border-stone-200 bg-stone-50 text-stone-700">SISAB historico 2024Q3</Badge>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-px overflow-hidden border border-stone-200 bg-stone-200 sm:grid-cols-2 xl:grid-cols-4">
+        <EvidenceMetric
+          icon={<Map size={18} />}
+          label="Setores censitarios"
+          value={formatNumber(evidence.census.sectors)}
+          detail={`${evidence.census.urbanSectors} urbanos | ${evidence.census.ruralSectors} rurais`}
+        />
+        <EvidenceMetric
+          icon={<Users size={18} />}
+          label="Populacao Censo 2022"
+          value={formatNumber(evidence.census.population2022)}
+          detail={`${formatNumber(evidence.census.occupiedHouseholds2022)} domicilios ocupados`}
+        />
+        <EvidenceMetric
+          icon={<Building2 size={18} />}
+          label="Atencao primaria"
+          value={`${evidence.network.ubs} UBS + ${evidence.network.cais} CAIS`}
+          detail={`${evidence.network.totalEstablishments} estabelecimentos no recorte`}
+        />
+        <EvidenceMetric
+          icon={<Database size={18} />}
+          label="Vinculos de equipes"
+          value={formatNumber(evidence.network.validTeamLinks)}
+          detail="Associados as UBS e ao CAIS do recorte"
+        />
+      </div>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+        <div className="border border-stone-200 bg-[#fbfbf7] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Linha de base historica da APS</h3>
+              <p className="mt-1 text-xs text-stone-500">
+                Equipes homologadas | SISAB/Previne Brasil | 2024Q3
+              </p>
+            </div>
+            <span className="text-xs text-stone-500">Resultado percentual</span>
+          </div>
+          <div className="mt-3 h-[300px]">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={indicatorData}
+                  layout="vertical"
+                  margin={{ left: 20, right: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <YAxis type="category" dataKey="name" width={128} />
+                  <Tooltip
+                    formatter={(value, _name, item) => [
+                      `${value}% (${item.payload.numerador}/${item.payload.denominador})`,
+                      "Resultado"
+                    ]}
+                  />
+                  <Bar dataKey="resultado" fill="#1c5f9f" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ChartLoading />
+            )}
+          </div>
+        </div>
+
+        <div className="border border-stone-200 bg-[#fbfbf7] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">
+                {territorialMetric === "coverage"
+                  ? "Pressao demonstrativa de cobertura"
+                  : "Contexto demonstrativo de vulnerabilidade"}
+              </h3>
+              <p className="mt-1 max-w-md text-xs leading-5 text-stone-500">
+                {territorialMetric === "coverage"
+                  ? "Populacao, densidade e distancia ao ponto de atencao primaria mais proximo."
+                  : "Criancas, pessoas com 70 anos ou mais, agua, esgoto e coleta de lixo no Censo 2022."}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-1 bg-stone-100 p-1">
+              <button
+                type="button"
+                onClick={() => setTerritorialMetric("coverage")}
+                className={`min-h-8 px-2 text-xs font-semibold ${
+                  territorialMetric === "coverage"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-600"
+                }`}
+              >
+                Cobertura
+              </button>
+              <button
+                type="button"
+                onClick={() => setTerritorialMetric("vulnerability")}
+                className={`min-h-8 px-2 text-xs font-semibold ${
+                  territorialMetric === "vulnerability"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-600"
+                }`}
+              >
+                Vulnerabilidade
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 h-[180px]">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={priorityData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="value" name="Setores" radius={[4, 4, 0, 0]}>
+                    {priorityData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ChartLoading />
+            )}
+          </div>
+          <div className="mt-3 border-t border-stone-200 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+              {territorialMetric === "coverage"
+                ? "Setores com maior pressao exploratoria"
+                : "Setores com maior contexto de vulnerabilidade"}
+            </p>
+            <div className="mt-2 grid gap-2">
+              {territorialMetric === "coverage"
+                ? evidence.census.topPrioritySectors.slice(0, 3).map((sector) => (
+                <div
+                  key={sector.sectorCode}
+                  className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-stone-800">
+                      Setor ...{sector.sectorCode.slice(-6)}
+                    </p>
+                    <p className="truncate text-stone-500">
+                      {formatNumber(sector.population)} pessoas | {sector.distanceKm.toLocaleString("pt-BR")} km da APS
+                    </p>
+                  </div>
+                  <Badge
+                    className="border-transparent text-white"
+                    style={{ backgroundColor: riskColors[sector.level] }}
+                  >
+                    {sector.score}
+                  </Badge>
+                </div>
+                  ))
+                : evidence.census.topVulnerabilitySectors.slice(0, 3).map((sector) => (
+                    <div
+                      key={sector.sectorCode}
+                      className="grid grid-cols-[1fr_auto] items-center gap-3 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-stone-800">
+                          Setor ...{sector.sectorCode.slice(-6)}
+                        </p>
+                        <p className="truncate text-stone-500">
+                          Esgoto {sector.sewageGapPercent.toLocaleString("pt-BR")}% | lixo {sector.wasteGapPercent.toLocaleString("pt-BR")}%
+                        </p>
+                      </div>
+                      <Badge
+                        className="border-transparent text-white"
+                        style={{ backgroundColor: riskColors[sector.level] }}
+                      >
+                        {sector.score}
+                      </Badge>
+                    </div>
+                  ))}
+            </div>
+            {territorialMetric === "vulnerability" ? (
+              <p className="mt-3 text-xs leading-5 text-stone-500">
+                {evidence.census.vulnerabilityScoredSectors} de {evidence.census.sectors} setores com score. {evidence.census.vulnerabilitySuppressedSectors} possuem algum valor pequeno protegido pelo IBGE e usam minimo publicado.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EvidenceMetric({
+  icon,
+  label,
+  value,
+  detail
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0 bg-white p-4">
+      <div className="flex items-center gap-2 text-folha">
+        {icon}
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+          {label}
+        </p>
+      </div>
+      <p className="mt-3 text-2xl font-semibold text-stone-900">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">{detail}</p>
+    </div>
   );
 }
 

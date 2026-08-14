@@ -27,6 +27,9 @@ import type { DataQualitySeverity, DataTrustBadge } from "@/types/dataQuality";
 const badgeLabels: Record<DataTrustBadge, string> = {
   publico_real: "Dado publico real",
   agregado: "Agregado",
+  fonte_oficial: "Fonte oficial",
+  validado_tecnicamente: "Validado tecnicamente",
+  homologacao_pendente: "Homologacao pendente",
   simulado: "Simulado",
   mvp_seed: "Seed MVP"
 };
@@ -70,7 +73,9 @@ export default function DataQualityPage() {
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <TrustBadge badge="publico_real" />
-              <TrustBadge badge="agregado" />
+              <TrustBadge badge="fonte_oficial" />
+              <TrustBadge badge="validado_tecnicamente" />
+              <TrustBadge badge="homologacao_pendente" />
               <TrustBadge badge="simulado" />
               <TrustBadge badge="mvp_seed" />
             </div>
@@ -91,7 +96,8 @@ export default function DataQualityPage() {
             <Progress value={report.qualityScore} className="mt-5" />
             <p className="mt-3 text-xs leading-5 text-stone-500">
               Gerado em {formatDate(report.generatedAt)}. O score considera
-              arquivos vazios, CNES ausente, geometria faltante e dados simulados.
+              integridade, relacionamentos e pendencias de homologacao, sem
+              confundir arquivo bem formatado com dado pronto para decisao.
             </p>
           </div>
         </div>
@@ -120,14 +126,14 @@ export default function DataQualityPage() {
           <QualityCard
             icon={<Layers3 size={19} />}
             label="Fontes publicas"
-            value={publicFiles}
-            helper="Prontas para troca por extracao real."
+            value={report.officialSourceCount}
+            helper={`${publicFiles} arquivos com dado publico real.`}
           />
           <QualityCard
             icon={<Sparkles size={19} />}
             label="Bases simuladas"
             value={simulatedFiles}
-            helper="Marcadas para governanca."
+            helper={`${report.pendingHomologationCount} fontes ainda pendentes.`}
           />
         </section>
 
@@ -226,9 +232,9 @@ export default function DataQualityPage() {
                 ))}
               </div>
               <div className="mt-5 rounded-md border border-stone-200 bg-[#fbfbf7] p-4 text-sm leading-6 text-stone-700">
-                Proximo passo recomendado: substituir os seeds CNES, SISAB e
-                GeoJSON por extracoes oficiais versionadas, mantendo o mesmo
-                contrato dos loaders.
+                Proximo passo recomendado: receber a exportacao agregada do
+                SISAB municipal e a malha operacional de bairros, validar os
+                contratos e registrar a aprovacao institucional no manifesto.
               </div>
             </CardContent>
           </Card>
@@ -362,6 +368,9 @@ function TrustBadge({ badge }: { badge: DataTrustBadge }) {
   const styles: Record<DataTrustBadge, string> = {
     publico_real: "border-green-200 bg-green-50 text-folha",
     agregado: "border-blue-200 bg-blue-50 text-blue-800",
+    fonte_oficial: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    validado_tecnicamente: "border-cyan-200 bg-cyan-50 text-cyan-800",
+    homologacao_pendente: "border-amber-200 bg-amber-50 text-amber-900",
     simulado: "border-yellow-200 bg-[#fff9e8] text-[#8a5a18]",
     mvp_seed: "border-stone-200 bg-stone-100 text-stone-700"
   };
