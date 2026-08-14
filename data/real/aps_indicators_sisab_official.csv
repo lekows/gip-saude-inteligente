@@ -1,0 +1,7 @@
+period,quadrimester,ibge_city_code,municipality,state,indicator_code,indicator_name,numerator,denominator,result_percent,team_view,registered_population,population_reference,source_created_at,source,dataset_status
+2024-12,2024Q3,5212501,Luziania,GO,10,Pre-natal com seis consultas e primeira ate a 12a semana,374,789,47.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated
+2024-12,2024Q3,5212501,Luziania,GO,20,Testes de sifilis e HIV na gestacao,527,789,67.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated
+2024-12,2024Q3,5212501,Luziania,GO,30,Atendimento odontologico na gestacao,412,789,52.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated
+2024-12,2024Q3,5212501,Luziania,GO,40,Coleta de citopatologico na APS,7707,45508,17.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated
+2024-12,2024Q3,5212501,Luziania,GO,50,Vacinacao infantil com pentavalente e poliomielite inativada,682,913,75.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated
+2024-12,2024Q3,5212501,Luziania,GO,70,Diabetes com consulta e hemoglobina glicada solicitada,1143,11564,10.0,homologadas,143671,209129,2025/10/01 15:27:57.000,SISAB Dados Abertos MS,official_source_teams_homologated

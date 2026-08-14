@@ -10,9 +10,10 @@ import {
   normalizeMortality,
   normalizeNotifiableDiseases,
   normalizeNutritionalStatus,
-  normalizeOutpatientProduction
+  normalizeOutpatientProduction,
+  normalizeSISABPerformanceIndicators
 } from "./susNormalizers";
-import type { SusDataset } from "@/types/sus";
+import type { CensusSectorFeatureCollection, SusDataset } from "@/types/sus";
 
 const DATA_DIR = path.join(process.cwd(), "data", "real");
 
@@ -20,6 +21,9 @@ export function loadSusDataset(): SusDataset {
   const partialDataset = {
     healthUnits: normalizeHealthUnits(readDataFile("health_units_cnes.csv")),
     apsIndicators: normalizeAPSIndicators(readDataFile("aps_indicators_sisab.csv")),
+    sisabPerformanceIndicators: normalizeSISABPerformanceIndicators(
+      readDataFile("aps_indicators_sisab_official.csv")
+    ),
     outpatientProduction: normalizeOutpatientProduction(
       readDataFile("outpatient_production_sia.csv")
     ),
@@ -39,8 +43,17 @@ export function loadSusDataset(): SusDataset {
     riskMapAreas: buildRiskMapAreas(
       readDataFile("luziania_neighborhoods.geojson"),
       partialDataset
-    )
+    ),
+    censusSectors: JSON.parse(
+      readDataFile("luziania_census_sectors_ibge.geojson")
+    ) as CensusSectorFeatureCollection
   };
+}
+
+export function loadCensusSectorEvidence() {
+  return JSON.parse(
+    readDataFile("luziania_census_sectors_ibge.geojson")
+  ) as CensusSectorFeatureCollection;
 }
 
 function readDataFile(fileName: string) {

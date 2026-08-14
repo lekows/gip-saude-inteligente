@@ -127,6 +127,20 @@ Arquivos em `data/real/`:
 Apesar do nome da pasta, esses arquivos sao seeds de demonstracao e ainda nao
 equivalem a extracoes oficiais homologadas. O SIM e explicitamente simulado.
 
+Atualizacao de 12 de agosto de 2026: `health_units_cnes.csv` foi substituido
+por um recorte oficial e minimizado do CNES. Tambem foram adicionados
+`aps_indicators_sisab_official.csv`, `luziania_municipality_ibge.geojson` e
+`source_provenance.json`. O arquivo territorial `aps_indicators_sisab.csv` e a
+malha `luziania_neighborhoods.geojson` permanecem demonstrativos e aguardam
+homologacao municipal. Consulte `docs/DADOS_OFICIAIS_CNES_IBGE_SISAB.md`.
+
+Atualizacao de 14 de agosto de 2026: a malha oficial foi ampliada para 348
+setores censitarios com demografia e caracteristicas domiciliares agregadas do
+Censo 2022. O arquivo `census_sector_vulnerability_ibge.csv` preserva o recorte
+auditavel, e o dashboard alterna entre pressao de cobertura e contexto de
+vulnerabilidade. Dos 348 setores, 317 possuem score demonstrativo; 31 ficam sem
+score por insuficiencia estatistica. Valores `X` do IBGE nunca sao estimados.
+
 Regras permanentes:
 
 - nenhum nome, CPF, CNS real, telefone ou endereco residencial;

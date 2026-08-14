@@ -10,7 +10,9 @@
     "test:domain": "node --experimental-strip-types --test tests/domainRules.test.mjs",
     "test:security": "node --test tests/securityRules.test.mjs",
     "test:behavioral": "node --experimental-strip-types --test tests/authSecurityBehavioral.test.mjs",
-    "test": "npm run test:domain && npm run test:security && npm run test:behavioral"
+    "test:data-sources": "node --test tests/officialDataSources.test.mjs",
+    "test:territorial-evidence": "node --experimental-strip-types --test tests/territorialCoveragePriority.test.mjs tests/territorialVulnerability.test.mjs",
+    "test": "npm run test:domain && npm run test:security && npm run test:behavioral && npm run test:data-sources && npm run test:territorial-evidence"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

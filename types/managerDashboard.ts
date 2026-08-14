@@ -1,4 +1,9 @@
 import type { HealthCondition, HealthUnit, LatLngTuple, NeighborhoodRisk } from "./territorial";
+import type {
+  CoveragePriorityLevel,
+  SISABPerformanceIndicator,
+  VulnerabilityPriorityLevel
+} from "./sus";
 
 export type ManagerRiskLevel = "verde" | "amarelo" | "vermelho";
 
@@ -52,6 +57,55 @@ export interface ManagerDashboardData {
   areas: ManagerArea[];
   monthlyEvolution: MonthlyManagerMetric[];
   center: readonly [number, number];
+  officialEvidence: ManagerOfficialEvidence;
+}
+
+export interface ManagerOfficialEvidence {
+  network: {
+    totalEstablishments: number;
+    primaryCareUnits: number;
+    ubs: number;
+    cais: number;
+    validTeamLinks: number;
+  };
+  census: {
+    sectors: number;
+    urbanSectors: number;
+    ruralSectors: number;
+    population2022: number;
+    occupiedHouseholds2022: number;
+    priorityDistribution: Array<{
+      level: CoveragePriorityLevel;
+      value: number;
+    }>;
+    vulnerabilityScoredSectors: number;
+    vulnerabilitySuppressedSectors: number;
+    vulnerabilityDistribution: Array<{
+      level: VulnerabilityPriorityLevel;
+      value: number;
+    }>;
+    topPrioritySectors: Array<{
+      sectorCode: string;
+      population: number;
+      distanceKm: number;
+      nearestUnit: string;
+      score: number;
+      level: CoveragePriorityLevel;
+    }>;
+    topVulnerabilitySectors: Array<{
+      sectorCode: string;
+      population: number;
+      childrenPercent: number;
+      olderPeoplePercent: number;
+      waterGapPercent: number;
+      sewageGapPercent: number;
+      wasteGapPercent: number;
+      score: number;
+      level: VulnerabilityPriorityLevel;
+      hasSuppressedValues: boolean;
+    }>;
+  };
+  sisabIndicators: SISABPerformanceIndicator[];
 }
 
 export interface ManagerKpis {

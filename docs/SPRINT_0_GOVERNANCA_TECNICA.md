@@ -54,6 +54,21 @@ O catalogo pode ser consultado em `/data-dictionary`. O status
 `seed_pending_validation` significa que a estrutura e demonstrativa e ainda
 nao equivale a uma extracao oficial autorizada.
 
+## Fontes oficiais incorporadas em 12 de agosto de 2026
+
+- CNES: 58 estabelecimentos ativos com atendimento ambulatorial SUS em
+  Luziania, sem campos pessoais, de contato, CNPJ ou endereco.
+- IBGE: malha municipal oficial de Luziania, codigo `5212501`, usada para
+  validar as coordenadas publicas dos estabelecimentos.
+- SISAB: seis indicadores municipais historicos de `2024Q3`, somente na visao
+  de equipes homologadas da fonte publica.
+- Proveniencia: URLs, hashes, granularidade, limitacoes e usos permitidos em
+  `data/real/source_provenance.json`.
+
+Os indicadores SISAB por bairro e os limites operacionais dos bairros continuam
+com status `institutional_pending_homologation`. Eles nao podem ser publicados
+como dados reais ate a entrega e aprovacao formal pela gestao municipal.
+
 ## Proxima dependencia institucional
 
 Antes de receber dados reais, o programa ainda precisa aprovar o dicionario de dados,
