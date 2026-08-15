@@ -191,8 +191,8 @@ export function LuzianiaHealthMapView({
             Inteligencia territorial e planejamento de mutiroes
           </h1>
           <p className="mt-3 text-sm leading-6 text-stone-600">
-            Dados simulados e agregados por bairro para demonstrar busca ativa,
-            priorizacao preventiva e predicao operacional sem expor pacientes.
+            Unidades publicas do CNES e indicadores territoriais simulados para
+            demonstrar busca ativa e priorizacao sem expor pacientes.
           </p>
         </div>
 
@@ -544,7 +544,40 @@ function RiskPanel({
   condition: HealthCondition;
   suggestion: AiCampaignSuggestion | null;
 }) {
-  if (!selectedNeighborhood || !selectedRisk) return null;
+  if (!selectedNeighborhood || !selectedRisk) {
+    if (selection.type === "unit") {
+      return (
+        <>
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-folha">
+              Unidade CNES oficial
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold">{selection.item.name}</h2>
+            <div className="mt-5 rounded-md border border-stone-200 bg-[#fbfbf7] p-4">
+              <div className="flex items-center gap-2 font-semibold">
+                <Cross size={18} />
+                {selection.item.type}
+              </div>
+              <p className="mt-3 text-sm leading-6 text-stone-700">
+                {selection.item.notes}
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <Metric label="Equipes" value={selection.item.activeTeams} />
+                <Metric label="Capacidade/turno" value={selection.item.capacityPerShift} />
+              </div>
+            </div>
+            <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+              Esta unidade ainda nao possui associacao com um bairro operacional
+              homologado. Por isso, o painel nao atribui a ela indicadores
+              territoriais simulados.
+            </p>
+          </section>
+          <PrivacyNote />
+        </>
+      );
+    }
+    return null;
+  }
 
   return (
     <>
@@ -819,9 +852,9 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 function PrivacyNote() {
   return (
     <p className="mt-6 text-xs leading-5 text-stone-500">
-      Privacidade: esta demonstracao usa dados mockados e agregados por bairro.
-      Qualquer integracao real com SUS deve passar por autorizacao, minimizacao,
-      controle de acesso, auditoria e desenho LGPD.
+      Privacidade: as unidades sao referencias publicas do CNES. Indicadores de
+      pacientes e risco continuam agregados ou simulados por territorio, sem
+      endereco individual. Novas integracoes exigem minimizacao e auditoria.
     </p>
   );
 }

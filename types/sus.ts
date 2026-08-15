@@ -12,6 +12,95 @@ export type SusSource =
   | "IBGE";
 
 export type SusRiskLevel = "verde" | "amarelo" | "vermelho";
+export type CoveragePriorityLevel = SusRiskLevel;
+export type VulnerabilityPriorityLevel = SusRiskLevel;
+export type VulnerabilityDataStatus =
+  | "complete"
+  | "published_lower_bound"
+  | "insufficient";
+
+export interface CensusSectorProperties {
+  sector_code: string;
+  ibge_city_code: string;
+  municipality: string;
+  state: string;
+  situation: "Urbana" | "Rural";
+  area_km2: number;
+  population_2022: number;
+  occupied_households_2022: number;
+  population_density_km2: number;
+  centroid_lat: number;
+  centroid_lng: number;
+  nearest_primary_care_cnes: string;
+  nearest_primary_care_name: string;
+  centroid_distance_km: number;
+  coverage_priority_score: number;
+  coverage_priority_level: CoveragePriorityLevel;
+  score_population_load: number;
+  score_density_pressure: number;
+  score_access_distance: number;
+  score_model: "demonstrative_access_v1";
+  residents_in_households_2022: number | null;
+  children_0_9_2022: number | null;
+  children_0_9_percent: number | null;
+  older_people_70_plus_2022: number | null;
+  older_people_70_plus_percent: number | null;
+  permanent_occupied_households_2022: number | null;
+  households_non_network_water_min_2022: number | null;
+  households_non_network_water_min_percent: number | null;
+  households_inadequate_sewage_min_2022: number | null;
+  households_inadequate_sewage_min_percent: number | null;
+  households_uncollected_waste_min_2022: number | null;
+  households_uncollected_waste_min_percent: number | null;
+  vulnerability_context_score: number | null;
+  vulnerability_context_level: VulnerabilityPriorityLevel | null;
+  score_children_share: number | null;
+  score_older_people_share: number | null;
+  score_water_gap: number | null;
+  score_sewage_gap: number | null;
+  score_waste_gap: number | null;
+  vulnerability_score_model: "demonstrative_vulnerability_v1";
+  vulnerability_data_status: VulnerabilityDataStatus;
+  suppressed_values_count: number;
+  dataset_status: "official_geography_demonstrative_score";
+}
+
+export interface CensusSectorFeature {
+  type: "Feature";
+  id: string;
+  properties: CensusSectorProperties;
+  geometry: {
+    type: "Polygon" | "MultiPolygon";
+    coordinates: number[][][] | number[][][][];
+  };
+}
+
+export interface CensusSectorFeatureCollection {
+  type: "FeatureCollection";
+  name: string;
+  metadata: {
+    generated_at: string;
+    municipality_ibge_code: string;
+    official_geography_source: string;
+    official_aggregate_source: string;
+      official_geography_url: string;
+      official_aggregate_url: string;
+      official_demography_url: string;
+      official_household_part1_url: string;
+      official_household_part2_url: string;
+    sector_count: number;
+    population_2022: number;
+    occupied_households_2022: number;
+      score_notice: string;
+      score_formula: string;
+      vulnerability_notice: string;
+      vulnerability_formula: string;
+      suppression_notice: string;
+    privacy: string;
+    source_sha256: Record<string, string>;
+  };
+  features: CensusSectorFeature[];
+}
 
 export interface HealthUnit {
   cnes: string;
@@ -40,6 +129,25 @@ export interface APSIndicator {
   earlyReturns: number;
   coveragePercent: number;
   source: SusSource | string;
+}
+
+export interface SISABPerformanceIndicator {
+  period: string;
+  quadrimester: string;
+  ibgeCityCode: string;
+  municipality: string;
+  state: string;
+  indicatorCode: string;
+  indicatorName: string;
+  numerator: number;
+  denominator: number;
+  resultPercent: number;
+  teamView: "homologadas" | "validas" | "geral" | string;
+  registeredPopulation: number;
+  populationReference: number;
+  sourceCreatedAt: string;
+  source: SusSource | string;
+  datasetStatus: string;
 }
 
 export interface OutpatientProduction {
@@ -133,6 +241,7 @@ export interface RiskMapArea extends TerritorialIndicator {
 export interface SusDataset {
   healthUnits: HealthUnit[];
   apsIndicators: APSIndicator[];
+  sisabPerformanceIndicators: SISABPerformanceIndicator[];
   outpatientProduction: OutpatientProduction[];
   hospitalMorbidity: HospitalMorbidity[];
   mortalityRecords: MortalityRecord[];
@@ -140,4 +249,5 @@ export interface SusDataset {
   nutritionalStatus: NutritionalStatusRecord[];
   immunization: ImmunizationRecord[];
   riskMapAreas: RiskMapArea[];
+  censusSectors: CensusSectorFeatureCollection;
 }

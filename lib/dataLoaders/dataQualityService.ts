@@ -5,6 +5,7 @@ import { dataSourceCatalog } from "@/data/dataGovernanceCatalog";
 import { parseCsv } from "./csv";
 import { readImportManifest } from "./importManifestService";
 import { loadSusDataset } from "./susFileRepository";
+import { verifySourceProvenance } from "./sourceProvenanceService";
 import type {
   DataFileQuality,
   DataQualityIssue,
@@ -16,8 +17,11 @@ const DATA_DIR = path.join(process.cwd(), "data", "real");
 export function getDataQualityReport(): DataQualityReport {
   const dataset = loadSusDataset();
   const importManifest = readImportManifest();
+  const provenance = verifySourceProvenance();
   const files = dataSourceCatalog.map(readFileQuality);
-  const issues = buildIssues(dataset);
+  const structuralIssues = buildStructuralIssues(dataset);
+  const governanceIssues = buildGovernanceIssues(provenance);
+  const issues = [...structuralIssues, ...governanceIssues];
   const coverage = {
     neighborhoodsWithGeo: dataset.riskMapAreas.filter((area) => area.polygon.length > 0).length,
     neighborhoodsWithAPS: new Set(dataset.apsIndicators.map((item) => item.neighborhoodId)).size,
@@ -32,18 +36,37 @@ export function getDataQualityReport(): DataQualityReport {
     simulatedMortalityRows: dataset.mortalityRecords.filter((record) => record.simulated).length
   };
 
-  const penalty = issues.reduce((total, issue) => {
+  const structuralPenalty = structuralIssues.reduce((total, issue) => {
     if (issue.severity === "critical") return total + 24;
     if (issue.severity === "warning") return total + 10;
     return total + 2;
   }, 0);
+  const governancePenalty = governanceIssues.reduce((total, issue) => {
+    if (issue.severity === "critical") return total + 24;
+    if (issue.severity === "warning") return total + 10;
+    return total;
+  }, 0);
+  const officialSourceCount = dataSourceCatalog.filter(
+    (source) => source.status === "official_verified"
+  ).length;
+  const pendingHomologationCount = dataSourceCatalog.filter(
+    (source) =>
+      source.status === "institutional_pending_homologation" ||
+      source.status === "seed_pending_validation"
+  ).length;
 
   return {
     generatedAt: new Date().toISOString(),
     files,
     issues,
     coverage,
-    qualityScore: Math.max(0, Math.min(100, 100 - penalty)),
+    qualityScore: Math.max(
+      0,
+      Math.min(100, 100 - structuralPenalty - governancePenalty)
+    ),
+    structuralScore: Math.max(0, Math.min(100, 100 - structuralPenalty)),
+    officialSourceCount,
+    pendingHomologationCount,
     importManifest
   };
 }
@@ -70,7 +93,9 @@ function readFileQuality(
   };
 }
 
-function buildIssues(dataset: ReturnType<typeof loadSusDataset>): DataQualityIssue[] {
+function buildStructuralIssues(
+  dataset: ReturnType<typeof loadSusDataset>
+): DataQualityIssue[] {
   const issues: DataQualityIssue[] = [];
   const geoNeighborhoods = new Set(dataset.riskMapAreas.map((area) => area.neighborhoodId));
   const unitCnes = new Set(dataset.healthUnits.map((unit) => unit.cnes));
@@ -87,8 +112,8 @@ function buildIssues(dataset: ReturnType<typeof loadSusDataset>): DataQualityIss
   if (apsWithoutKnownUnit.length) {
     issues.push({
       severity: "critical",
-      title: "Indicadores APS sem unidade CNES correspondente",
-      description: `${apsWithoutKnownUnit.length} linhas SISAB referenciam CNES ausente na camada de unidades.`
+      title: "Seed territorial SISAB ainda usa CNES ficticio",
+      description: `${apsWithoutKnownUnit.length} linhas demonstrativas nao correspondem ao recorte CNES oficial e nao podem ser apresentadas como dado real.`
     });
   }
 
@@ -120,6 +145,70 @@ function buildIssues(dataset: ReturnType<typeof loadSusDataset>): DataQualityIss
     severity: "info",
     title: "Pacientes do MVP nao sao reais",
     description: "Busca ativa e alto risco usam dados agregados ou simulados, sem endereco individual."
+  });
+
+  if (
+    dataset.healthUnits.some(
+      (unit) => !/^\d{7}$/.test(unit.cnes) || unit.ibgeCityCode !== "5212501"
+    )
+  ) {
+    issues.push({
+      severity: "critical",
+      title: "CNES oficial fora do contrato",
+      description: "Ha unidade sem codigo CNES de sete digitos ou fora de Luziania-GO."
+    });
+  }
+
+  if (
+    dataset.sisabPerformanceIndicators.some(
+      (indicator) =>
+        indicator.ibgeCityCode !== "5212501" ||
+        indicator.teamView !== "homologadas" ||
+        indicator.numerator < 0 ||
+        indicator.denominator < 0
+    )
+  ) {
+    issues.push({
+      severity: "critical",
+      title: "SISAB oficial fora do recorte homologado",
+      description: "O arquivo municipal oficial falhou na validacao de municipio, visao ou contagens."
+    });
+  }
+
+  return issues;
+}
+
+function buildGovernanceIssues(
+  provenance: ReturnType<typeof verifySourceProvenance>
+): DataQualityIssue[] {
+  const issues: DataQualityIssue[] = [];
+  const invalidEvidence = provenance.filter(
+    (item) => !item.fileExists || !item.hashMatches || !item.recordsMatch
+  );
+
+  if (invalidEvidence.length) {
+    issues.push({
+      severity: "critical",
+      title: "Proveniencia ou integridade divergente",
+      description: `${invalidEvidence.length} arquivo(s) nao conferem com o hash ou volume registrado no manifesto.`
+    });
+  }
+
+  const pending = provenance.filter(
+    (item) => item.dataset.status === "institutional_pending_homologation"
+  );
+  if (pending.length) {
+    issues.push({
+      severity: "warning",
+      title: "Camadas territoriais aguardam homologacao municipal",
+      description: `${pending.length} camada(s) continuam restritas a demonstracao: SISAB por bairro e limites operacionais de bairros.`
+    });
+  }
+
+  issues.push({
+    severity: "info",
+    title: "CNES, IBGE e SISAB municipal com origem verificada",
+    description: "Os arquivos oficiais possuem URL, periodo, granularidade, hash e usos permitidos registrados no manifesto."
   });
 
   return issues;

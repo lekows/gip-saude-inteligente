@@ -1,7 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { EnrichedManagerArea } from "@/types/managerDashboard";
+import type {
+  EnrichedManagerArea,
+  ManagerOfficialEvidence
+} from "@/types/managerDashboard";
+import type { HealthUnit } from "@/types/territorial";
 
 const ManagerTerritorialMap = dynamic(
   () => import("./ManagerTerritorialMap").then((mod) => mod.ManagerTerritorialMap),
@@ -16,9 +20,19 @@ const ManagerTerritorialMap = dynamic(
 );
 
 export function ManagerTerritorialMapClient({
-  areas
+  areas,
+  units,
+  officialEvidence
 }: {
   areas: EnrichedManagerArea[];
+  units: HealthUnit[];
+  officialEvidence: ManagerOfficialEvidence;
 }) {
-  return <ManagerTerritorialMap areas={areas} />;
+  return (
+    <ManagerTerritorialMap
+      areas={areas}
+      units={units}
+      officialEvidence={officialEvidence}
+    />
+  );
 }

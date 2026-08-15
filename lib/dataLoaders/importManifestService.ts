@@ -47,12 +47,20 @@ export function persistImportFile({
   datasetType: ImportDatasetType;
   fileName: string;
   content: string;
-  status: Extract<ImportStatus, "rascunho" | "publicado">;
+  status: Extract<
+    ImportStatus,
+    "rascunho" | "aguardando_homologacao" | "publicado"
+  >;
 }) {
   ensureImportStructure();
   const version = createVersion();
   const safeFileName = sanitizeFileName(fileName);
-  const folder = status === "publicado" ? "published" : "drafts";
+  const folder =
+    status === "publicado"
+      ? "published"
+      : status === "aguardando_homologacao"
+        ? "pending"
+        : "drafts";
   const storedFileName = `${version}-${datasetType}-${safeFileName}`;
   const absolutePath = path.join(IMPORT_ROOT, folder, storedFileName);
   writeFileSync(absolutePath, content, "utf8");
@@ -65,6 +73,7 @@ export function persistImportFile({
 
 export function ensureImportStructure() {
   mkdirSync(path.join(IMPORT_ROOT, "drafts"), { recursive: true });
+  mkdirSync(path.join(IMPORT_ROOT, "pending"), { recursive: true });
   mkdirSync(path.join(IMPORT_ROOT, "published"), { recursive: true });
   mkdirSync(path.join(IMPORT_ROOT, "archive"), { recursive: true });
 }

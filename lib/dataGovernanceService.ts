@@ -9,7 +9,9 @@ export function getDataGovernanceSummary() {
     fields: dataFieldDictionary.length,
     requiredFields: dataFieldDictionary.filter((field) => field.required).length,
     pendingSources: dataSourceCatalog.filter(
-      (source) => source.status === "seed_pending_validation"
+      (source) =>
+        source.status === "seed_pending_validation" ||
+        source.status === "institutional_pending_homologation"
     ).length,
     simulatedSources: dataSourceCatalog.filter(
       (source) => source.status === "simulated_only"

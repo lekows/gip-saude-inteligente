@@ -1,9 +1,10 @@
 import type { DataTrustBadge } from "./dataQuality";
 
 export type DataSourceStatus =
+  | "official_verified"
+  | "institutional_pending_homologation"
   | "seed_pending_validation"
-  | "simulated_only"
-  | "authorized_public";
+  | "simulated_only";
 
 export type DataFieldClassification =
   | "publico_agregado"

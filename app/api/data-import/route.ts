@@ -16,13 +16,20 @@ interface ImportRequestBody {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as ImportRequestBody;
-  const status: Extract<ImportStatus, "rascunho" | "publicado"> =
-    body.action === "publish" ? "publicado" : "rascunho";
+  const status: Extract<
+    ImportStatus,
+    "rascunho" | "aguardando_homologacao" | "publicado"
+  > =
+    body.action === "publish"
+      ? body.datasetType === "sisab"
+        ? "aguardando_homologacao"
+        : "publicado"
+      : "rascunho";
   const preview = parseImportText(body.content, body.fileName, body.datasetType);
   const errors = preview.validations.filter((item) => item.severity === "error").length;
   const warnings = preview.validations.filter((item) => item.severity === "warning").length;
 
-  if (status === "publicado" && errors > 0) {
+  if (body.action === "publish" && errors > 0) {
     return NextResponse.json(
       {
         ok: false,
@@ -64,7 +71,9 @@ export async function POST(request: Request) {
     load,
     manifest,
     message:
-      status === "publicado"
+      status === "aguardando_homologacao"
+        ? "Carga SISAB validada e enviada para homologacao institucional; ainda nao esta ativa."
+        : status === "publicado"
         ? "Dataset publicado e manifesto atualizado."
         : "Rascunho salvo no repositório local."
   });

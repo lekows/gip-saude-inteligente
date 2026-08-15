@@ -9,6 +9,7 @@ import type {
   NutritionalStatusRecord,
   OutpatientProduction,
   RiskMapArea,
+  SISABPerformanceIndicator,
   SusDataset,
   SusRiskLevel,
   TerritorialIndicator
@@ -65,6 +66,29 @@ export function normalizeAPSIndicators(csv: string): APSIndicator[] {
     earlyReturns: numberValue(row.early_returns),
     coveragePercent: numberValue(row.coverage_percent),
     source: row.source
+  }));
+}
+
+export function normalizeSISABPerformanceIndicators(
+  csv: string
+): SISABPerformanceIndicator[] {
+  return parseCsv(csv).map((row) => ({
+    period: row.period,
+    quadrimester: row.quadrimester,
+    ibgeCityCode: row.ibge_city_code,
+    municipality: row.municipality,
+    state: row.state,
+    indicatorCode: row.indicator_code,
+    indicatorName: row.indicator_name,
+    numerator: numberValue(row.numerator),
+    denominator: numberValue(row.denominator),
+    resultPercent: numberValue(row.result_percent),
+    teamView: row.team_view,
+    registeredPopulation: numberValue(row.registered_population),
+    populationReference: numberValue(row.population_reference),
+    sourceCreatedAt: row.source_created_at,
+    source: row.source,
+    datasetStatus: row.dataset_status
   }));
 }
 
@@ -142,7 +166,7 @@ export function normalizeImmunization(csv: string): ImmunizationRecord[] {
 
 export function buildRiskMapAreas(
   geojsonText: string,
-  partialDataset: Omit<SusDataset, "riskMapAreas">
+  partialDataset: Omit<SusDataset, "riskMapAreas" | "censusSectors">
 ): RiskMapArea[] {
   const geojson = JSON.parse(geojsonText) as NeighborhoodGeoJson;
   const indicators = buildTerritorialIndicators(geojson, partialDataset);
@@ -199,7 +223,7 @@ export function classifySusTerritorialRisk(score: number): SusRiskLevel {
 
 function buildTerritorialIndicators(
   geojson: NeighborhoodGeoJson,
-  dataset: Omit<SusDataset, "riskMapAreas">
+  dataset: Omit<SusDataset, "riskMapAreas" | "censusSectors">
 ): TerritorialIndicator[] {
   return geojson.features.map((feature) => {
     const id = feature.properties.id;

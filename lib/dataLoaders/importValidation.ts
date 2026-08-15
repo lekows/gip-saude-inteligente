@@ -4,6 +4,7 @@ import type {
   ImportValidationResult
 } from "@/types/dataImport";
 import { findIdentifiablePatientColumns } from "@/lib/dataGovernance/privacyRules";
+import { parseCsv } from "./csv";
 
 export const importDatasetLabels: Record<ImportDatasetType, string> = {
   cnes: "CNES - Unidades de saude",
@@ -42,15 +43,9 @@ export function parseImportText(
     return parseGeoJsonPreview(text, fileName);
   }
 
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  const headers = lines[0]?.split(",").map((header) => header.trim()) ?? [];
-  const rows = lines.slice(1, 7).map((line) => {
-    const cells = line.split(",").map((cell) => cell.trim());
-    return headers.reduce<Record<string, string>>((row, header, index) => {
-      row[header] = cells[index] ?? "";
-      return row;
-    }, {});
-  });
+  const allRows = parseCsv(text);
+  const headers = Object.keys(allRows[0] ?? {});
+  const rows = allRows.slice(0, 6);
 
   return buildPreview({
     fileName,
@@ -58,8 +53,8 @@ export function parseImportText(
     rawText: text,
     headers,
     rows,
-    recordCount: Math.max(lines.length - 1, 0),
-    extraValidations: validateCsvRows(headers, rows, datasetType)
+    recordCount: allRows.length,
+    extraValidations: validateCsvRows(headers, allRows, datasetType)
   });
 }
 
@@ -249,6 +244,17 @@ function validateCsvRows(
         ? `${missingCoordinates.length} linhas do preview estao sem coordenadas.`
         : "Todas as unidades do preview possuem latitude e longitude."
     });
+
+    const invalidCnes = rows.filter(
+      (row) => !/^\d{7}$/.test(row.cnes ?? "")
+    );
+    validations.push({
+      severity: invalidCnes.length ? "error" : "ok",
+      title: "Codigo CNES oficial",
+      message: invalidCnes.length
+        ? `${invalidCnes.length} linha(s) nao possuem CNES numerico com sete digitos.`
+        : "Todos os estabelecimentos possuem CNES numerico com sete digitos."
+    });
   }
 
   if (datasetType === "sisab") {
@@ -259,6 +265,48 @@ function validateCsvRows(
       message: hasAggregates
         ? "Arquivo usa indicadores agregados, sem identificacao de paciente."
         : "Confira se o arquivo nao contem dados individualizados."
+    });
+
+    const invalidPeriods = rows.filter(
+      (row) => !/^\d{4}-(0[1-9]|1[0-2])$/.test(row.period ?? "")
+    );
+    const invalidCounts = rows.filter((row) =>
+      [
+        row.target_population,
+        row.registered_patients,
+        row.screenings,
+        row.high_risk_patients,
+        row.early_returns
+      ]
+        .filter((value) => value !== undefined && value !== "")
+        .some((value) => !Number.isFinite(Number(value)) || Number(value) < 0)
+    );
+    const inconsistentCounts = rows.filter(
+      (row) =>
+        Number(row.registered_patients) > Number(row.target_population) ||
+        Number(row.high_risk_patients) > Number(row.registered_patients)
+    );
+
+    validations.push({
+      severity: invalidPeriods.length ? "error" : "ok",
+      title: "Competencias validas",
+      message: invalidPeriods.length
+        ? `${invalidPeriods.length} linha(s) nao usam o formato AAAA-MM.`
+        : "Todas as competencias usam o formato AAAA-MM."
+    });
+    validations.push({
+      severity: invalidCounts.length || inconsistentCounts.length ? "error" : "ok",
+      title: "Consistencia das contagens",
+      message:
+        invalidCounts.length || inconsistentCounts.length
+          ? `${invalidCounts.length} linha(s) possuem valores invalidos e ${inconsistentCounts.length} possuem numeradores acima do denominador.`
+          : "Contagens nao negativas e numeradores dentro dos denominadores informados."
+    });
+    validations.push({
+      severity: "warning",
+      title: "Homologacao institucional obrigatoria",
+      message:
+        "A validacao tecnica nao publica o SISAB territorial. A carga deve ser aprovada pela APS municipal com evidencia registrada."
     });
   }
 
@@ -273,7 +321,7 @@ const sampleFileNames: Record<ImportDatasetType, string> = {
 
 const sampleFiles: Record<ImportDatasetType, string> = {
   cnes:
-    "cnes,name,type,ibge_city_code,city,state,neighborhood_id,neighborhood,lat,lng,teams\nCNES-LUZ-001,UBS Centro Integrado,UBS,5212501,Luziania,GO,centro,Centro,-16.251,-47.951,4\nCNES-LUZ-003,UBS Jardim Inga,UBS,5212501,Luziania,GO,jardim-inga,Jardim Inga,-16.184,-47.949,5",
+    "cnes,name,type,ibge_city_code,city,state,neighborhood_id,neighborhood,lat,lng,teams\n2340208,CAIS I,CAIS,5212501,Luziania,GO,setor-fumal,Setor Fumal,-16.265807,-47.955301,0\n0218650,PSF Jardim do Inga,UBS,5212501,Luziania,GO,jardim-do-inga,Jardim do Inga,-16.144773,-47.950516,4",
   sisab:
     "period,ibge_city_code,neighborhood_id,unit_cnes,condition,target_population,registered_patients,screenings,high_risk_patients,early_returns\n2026-06,5212501,jardim-inga,CNES-LUZ-003,hipertensao,7200,5140,2980,910,790\n2026-06,5212501,pedregal,CNES-LUZ-004,diabetes,6100,4260,2450,840,650",
   geojson:

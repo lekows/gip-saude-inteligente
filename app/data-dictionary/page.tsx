@@ -24,8 +24,8 @@ export default function DataDictionaryPage() {
           <p className="mt-3 max-w-4xl text-sm leading-6 text-stone-600">
             Contrato minimo para entender de onde cada indicador vem, como deve
             ser validado e onde pode ser usado. Neste momento, os arquivos sao
-            seeds demonstrativos ou simulados e ainda aguardam homologacao
-            institucional para operacao real.
+            oficiais verificadas, seeds demonstrativos e fontes que ainda
+            aguardam homologacao institucional para operacao territorial.
           </p>
         </div>
 

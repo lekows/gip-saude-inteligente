@@ -21,6 +21,9 @@ import type { DataQualityReport, DataQualitySeverity } from "@/types/dataQuality
 const badgeColors = {
   publico_real: "#1f7a4d",
   agregado: "#1c5f9f",
+  fonte_oficial: "#047857",
+  validado_tecnicamente: "#0e7490",
+  homologacao_pendente: "#c9912d",
   simulado: "#c9912d",
   mvp_seed: "#78716c"
 };

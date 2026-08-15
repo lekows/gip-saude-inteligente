@@ -1,6 +1,9 @@
 export type DataTrustBadge =
   | "publico_real"
   | "agregado"
+  | "fonte_oficial"
+  | "validado_tecnicamente"
+  | "homologacao_pendente"
   | "simulado"
   | "mvp_seed";
 
@@ -39,6 +42,9 @@ export interface DataQualityReport {
   issues: DataQualityIssue[];
   coverage: DataCoverageQuality;
   qualityScore: number;
+  structuralScore: number;
+  officialSourceCount: number;
+  pendingHomologationCount: number;
   importManifest: ImportManifest;
 }
 import type { ImportManifest } from "./dataImport";

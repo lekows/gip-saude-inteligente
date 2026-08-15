@@ -1,7 +1,6 @@
 import { healthUnits, luzianiaCenter, neighborhoodRisks } from "@/data/territorialData";
-import type { ManagerDashboardData } from "@/types/managerDashboard";
 
-export const managerDashboardData: ManagerDashboardData = {
+export const managerDashboardData = {
   center: luzianiaCenter,
   neighborhoods: neighborhoodRisks,
   units: healthUnits.filter((unit) => unit.type === "UBS" || unit.type === "CAIS"),

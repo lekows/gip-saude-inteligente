@@ -1,6 +1,10 @@
 export type ImportDatasetType = "cnes" | "sisab" | "geojson";
 
-export type ImportStatus = "rascunho" | "validado" | "publicado";
+export type ImportStatus =
+  | "rascunho"
+  | "validado"
+  | "aguardando_homologacao"
+  | "publicado";
 
 export type ImportValidationSeverity = "ok" | "warning" | "error";
 

@@ -107,7 +107,12 @@ export function DataImportClient({
 
       setPreview((current) => ({
         ...current,
-        status: action === "publish" ? "publicado" : "rascunho"
+        status:
+          action === "publish"
+            ? datasetType === "sisab"
+              ? "aguardando_homologacao"
+              : "publicado"
+            : "rascunho"
       }));
       setHistory((current) => [result.load as ImportHistoryItem, ...current]);
       setPublishedMessage(result.message);
@@ -160,8 +165,8 @@ export function DataImportClient({
                 <UploadCloud className="mx-auto text-folha" size={32} />
                 <p className="mt-3 text-sm font-semibold">Enviar arquivo para preview</p>
                 <p className="mt-1 text-xs leading-5 text-stone-500">
-                  CSV para CNES/SISAB ou GeoJSON para bairros. O MVP nao grava
-                  automaticamente no disco.
+                  CSV para CNES/SISAB ou GeoJSON territorial. O arquivo so e
+                  versionado depois da validacao e da acao do gestor.
                 </p>
                 <label className="mt-4 inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-white hover:bg-[#28352d]">
                   <FileUp size={16} />
@@ -223,7 +228,9 @@ export function DataImportClient({
                   disabled={validationSummary.errors > 0 || saving}
                 >
                   <PlayCircle size={16} />
-                  Validar e publicar dataset
+                  {datasetType === "sisab"
+                    ? "Enviar para homologacao"
+                    : "Validar e publicar dataset"}
                 </Button>
               </div>
 
@@ -352,6 +359,7 @@ function StatusBadge({ status, compact }: { status: ImportStatus; compact?: bool
   const styles: Record<ImportStatus, string> = {
     rascunho: "border-stone-200 bg-stone-100 text-stone-700",
     validado: "border-blue-200 bg-blue-50 text-blue-800",
+    aguardando_homologacao: "border-amber-200 bg-amber-50 text-amber-900",
     publicado: "border-green-200 bg-green-50 text-folha"
   };
 

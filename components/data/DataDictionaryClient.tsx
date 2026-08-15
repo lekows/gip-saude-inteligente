@@ -126,10 +126,10 @@ export function DataDictionaryClient({
             <h2 className="font-semibold">Portao de homologacao</h2>
           </div>
           <p className="mt-3 text-sm leading-6 text-amber-950/80">
-            O catalogo documenta o contrato desejado, mas os seeds do MVP ainda
-            nao equivalem a extracoes oficiais homologadas. Antes do uso real,
-            cada fonte precisa de responsavel, competencia, metodo de extracao e
-            aprovacao institucional.
+            CNES, setores, demografia e domicilios do IBGE e linha de base municipal
+            do SISAB ja possuem origem oficial verificada. A divisao por bairros e os
+            indicadores territoriais do SISAB ainda precisam de exportacao e
+            aprovacao formal da APS de Luziania antes do uso operacional.
           </p>
         </div>
       </section>
@@ -315,18 +315,21 @@ function Metric({
 
 function StatusBadge({ status }: { status: DataSourceCatalogItem["status"] }) {
   const labels = {
-    seed_pending_validation: "A homologar",
+    official_verified: "Oficial verificado",
+    institutional_pending_homologation: "Homologacao pendente",
+    seed_pending_validation: "Seed a validar",
     simulated_only: "Simulado",
-    authorized_public: "Autorizado"
   };
 
   return (
     <Badge
       className={cn(
         "shrink-0",
-        status === "seed_pending_validation" && "border-amber-200 bg-amber-50 text-amber-900",
+        (status === "seed_pending_validation" ||
+          status === "institutional_pending_homologation") &&
+          "border-amber-200 bg-amber-50 text-amber-900",
         status === "simulated_only" && "border-blue-200 bg-blue-50 text-blue-800",
-        status === "authorized_public" && "border-green-200 bg-green-50 text-folha"
+        status === "official_verified" && "border-green-200 bg-green-50 text-folha"
       )}
     >
       {labels[status]}
