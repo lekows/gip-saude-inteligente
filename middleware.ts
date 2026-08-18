@@ -27,11 +27,28 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Se o usuário ESTIVER autenticado, buscamos o perfil para autorização
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, account_status, active")
-    .eq("id", user.id)
-    .single();
+  let profile: {
+    role: string;
+    account_status: string;
+    active: boolean;
+  } | null = null;
+
+  try {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role, account_status, active")
+      .eq("id", user.id)
+      .single();
+    profile = data;
+  } catch {
+    // Mantém a área pública disponível se a consulta de autorização falhar.
+    // Rotas internas voltam ao login e serão reavaliadas na próxima tentativa.
+    if (!isPublicRoute) {
+      url.pathname = "/entrar";
+      return createRedirectWithCookies(request, url, supabaseResponse);
+    }
+    return supabaseResponse;
+  }
 
   // Sem perfil cadastrado
   if (!profile) {

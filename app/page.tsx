@@ -204,7 +204,7 @@ function PublicSignal({ icon, title, text }: { icon: React.ReactNode; title: str
 }
 
 function OperationalHome() {
-  const report = getDataQualityReport();
+  const summary = getOperationalSummary();
 
   return (
     <main className="bg-[#f7f7f2] p-5 text-ink lg:p-6">
@@ -247,15 +247,17 @@ function OperationalHome() {
               <div className="flex items-center justify-between rounded-md bg-green-50 p-4 text-folha">
                 <div>
                   <p className="text-sm font-semibold">Qualidade dos dados</p>
-                  <p className="mt-1 text-4xl font-semibold">{report.qualityScore}%</p>
+                  <p className="mt-1 text-4xl font-semibold">
+                    {summary.qualityScore === null ? "--" : `${summary.qualityScore}%`}
+                  </p>
                 </div>
                 <ShieldCheck size={36} />
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <MiniMetric label="Arquivos" value={report.files.length} />
-                <MiniMetric label="Bairros" value={report.coverage.neighborhoodsWithGeo} />
-                <MiniMetric label="Unidades" value={report.coverage.totalHealthUnits} />
-                <MiniMetric label="Alertas" value={report.issues.length} />
+                <MiniMetric label="Arquivos" value={summary.files} />
+                <MiniMetric label="Bairros" value={summary.neighborhoods} />
+                <MiniMetric label="Unidades" value={summary.healthUnits} />
+                <MiniMetric label="Alertas" value={summary.issues} />
               </div>
               <Link
                 href="/data-quality"
@@ -320,6 +322,27 @@ function OperationalHome() {
       </section>
     </main>
   );
+}
+
+function getOperationalSummary() {
+  try {
+    const report = getDataQualityReport();
+    return {
+      qualityScore: report.qualityScore as number | null,
+      files: report.files.length as number | string,
+      neighborhoods: report.coverage.neighborhoodsWithGeo as number | string,
+      healthUnits: report.coverage.totalHealthUnits as number | string,
+      issues: report.issues.length as number | string,
+    };
+  } catch {
+    return {
+      qualityScore: null,
+      files: "--",
+      neighborhoods: "--",
+      healthUnits: "--",
+      issues: "--",
+    };
+  }
 }
 
 function MiniMetric({ label, value }: { label: string; value: string | number }) {
