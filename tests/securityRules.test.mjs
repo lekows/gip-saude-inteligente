@@ -18,6 +18,10 @@ const supabaseMiddlewareSource = readFileSync(
   new URL("../lib/supabase/middleware.ts", import.meta.url),
   "utf8",
 );
+const homePageSource = readFileSync(
+  new URL("../app/page.tsx", import.meta.url),
+  "utf8",
+);
 const mobileScreeningSource = readFileSync(
   new URL("../components/mobile/QuickScreeningCard.tsx", import.meta.url),
   "utf8",
@@ -38,6 +42,17 @@ test("auth callback never claims administrator privileges", () => {
 test("middleware uses server-side getUser", () => {
   assert.match(supabaseMiddlewareSource, /supabase\.auth\.getUser\(\)/);
   assert.doesNotMatch(supabaseMiddlewareSource, /supabase\.auth\.getSession\(\)/);
+});
+
+test("auth and profile failures do not crash public pages", () => {
+  assert.match(supabaseMiddlewareSource, /try\s*\{[\s\S]*supabase\.auth\.getUser\(\)/);
+  assert.match(supabaseMiddlewareSource, /catch\s*\{/);
+  assert.match(middlewareSource, /consulta de autorização falhar/);
+});
+
+test("operational homepage tolerates unavailable data summary", () => {
+  assert.match(homePageSource, /function getOperationalSummary\(\)/);
+  assert.match(homePageSource, /qualityScore: null/);
 });
 
 test("middleware enforces account_status and blocks pending users", () => {

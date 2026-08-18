@@ -34,11 +34,22 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user, supabase };
+    if (error) {
+      return { supabaseResponse, user: null, supabase: null };
+    }
+
+    return { supabaseResponse, user, supabase };
+  } catch {
+    // Uma sessão expirada ou uma indisponibilidade momentânea do Auth não deve
+    // transformar páginas públicas em erro 500.
+    return { supabaseResponse, user: null, supabase: null };
+  }
 }
 
 export function createRedirectWithCookies(
