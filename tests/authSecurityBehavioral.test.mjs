@@ -27,6 +27,26 @@ test("Client Hint de dispositivo tem prioridade sobre User-Agent", () => {
   assert.equal(getAuthenticatedHome(headers), "/mobile");
 });
 
+test("papel acadêmico direciona para Meu GIP independentemente do dispositivo", () => {
+  const desktopHeaders = new Headers({
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  });
+  const mobileHeaders = new Headers({
+    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile",
+  });
+
+  assert.equal(getAuthenticatedHome(desktopHeaders, "academico_participante"), "/meu-gip");
+  assert.equal(getAuthenticatedHome(mobileHeaders, "academico_colaborador"), "/meu-gip");
+});
+
+test("professor coordenador entra diretamente na gestão acadêmica", () => {
+  const headers = new Headers({
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  });
+
+  assert.equal(getAuthenticatedHome(headers, "professor_coordenador"), "/gestao-academica");
+});
+
 test("createRedirectWithCookies preserva e propaga todos os cookies de sessão no redirecionamento", () => {
   const mockReq = {
     url: "http://localhost:3000/manager-dashboard",

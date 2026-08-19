@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:domain": "node --experimental-strip-types --test tests/domainRules.test.mjs",
+    "test:domain": "node --experimental-strip-types --test tests/domainRules.test.mjs tests/academicRules.test.mjs",
     "test:security": "node --test tests/securityRules.test.mjs",
     "test:behavioral": "node --experimental-strip-types --test tests/authSecurityBehavioral.test.mjs",
     "test:data-sources": "node --test tests/officialDataSources.test.mjs",

@@ -73,13 +73,40 @@ export async function middleware(request: NextRequest) {
 
   // 4. Usuário APROVADO: retira das páginas de entrada/espera
   if (path === "/entrar" || path === "/aguardando-aprovacao") {
-    url.pathname = getAuthenticatedHome(request.headers);
+    url.pathname = getAuthenticatedHome(request.headers, profile.role);
     return createRedirectWithCookies(request, url, supabaseResponse);
   }
 
   // 5. Bloqueia rotas administrativas se não for administrador
   if (path.startsWith("/admin") && profile.role !== "administrador") {
     url.pathname = "/manager-dashboard";
+    return createRedirectWithCookies(request, url, supabaseResponse);
+  }
+
+  if (
+    path.startsWith("/gestao-academica") &&
+    profile.role !== "administrador" &&
+    profile.role !== "professor_coordenador"
+  ) {
+    url.pathname = "/meu-gip";
+    return createRedirectWithCookies(request, url, supabaseResponse);
+  }
+
+  const isAcademic =
+    profile.role === "academico_colaborador" ||
+    profile.role === "academico_participante";
+  const managerOnlyPrefixes = [
+    "/manager-dashboard",
+    "/territorial-map",
+    "/campaign-",
+    "/municipal-",
+    "/data",
+    "/convidar-alunos",
+    "/gerenciar-usuarios",
+  ];
+
+  if (isAcademic && managerOnlyPrefixes.some((prefix) => path.startsWith(prefix))) {
+    url.pathname = "/meu-gip";
     return createRedirectWithCookies(request, url, supabaseResponse);
   }
 

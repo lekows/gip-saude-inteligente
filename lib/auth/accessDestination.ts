@@ -11,6 +11,20 @@ export function detectAccessDevice(headers: Headers): AccessDevice {
   return mobilePattern.test(userAgent) ? "mobile" : "desktop";
 }
 
-export function getAuthenticatedHome(headers: Headers): "/mobile" | "/manager-dashboard" {
+export type AuthenticatedHome =
+  | "/mobile"
+  | "/manager-dashboard"
+  | "/gestao-academica"
+  | "/meu-gip";
+
+export function getAuthenticatedHome(headers: Headers, role?: string | null): AuthenticatedHome {
+  if (role === "academico_colaborador" || role === "academico_participante") {
+    return "/meu-gip";
+  }
+
+  if (role === "professor_coordenador") {
+    return "/gestao-academica";
+  }
+
   return detectAccessDevice(headers) === "mobile" ? "/mobile" : "/manager-dashboard";
 }

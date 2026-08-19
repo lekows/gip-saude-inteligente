@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   BookOpen,
+  GraduationCap,
   Database,
   FileUp,
   Home,
@@ -45,6 +46,12 @@ const protectedNavItems = [
 ];
 
 const adminNavItem = { href: "/admin/usuarios", label: "Usuários", icon: UserCog };
+const academicManagementNavItem = {
+  href: "/gestao-academica",
+  label: "Acadêmico",
+  icon: GraduationCap,
+};
+const myGipNavItem = { href: "/meu-gip", label: "Meu GIP", icon: GraduationCap };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -91,13 +98,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const immersiveRoute = pathname === "/mobile" || pathname === "/comunidade";
   const showProtectedNav = userState.isAuthenticated && userState.isApproved;
+  const isAcademic =
+    userState.role === "academico_colaborador" ||
+    userState.role === "academico_participante";
 
   // Filtrar os itens de menu baseados nas permissões/papel
   const activeNavItems = showProtectedNav
-    ? [
-        ...protectedNavItems,
-        ...(userState.role === "administrador" ? [adminNavItem] : []),
-      ]
+    ? isAcademic
+      ? [protectedNavItems[0], myGipNavItem, protectedNavItems[8]]
+      : [
+          ...protectedNavItems,
+          ...(userState.role === "administrador" || userState.role === "professor_coordenador"
+            ? [academicManagementNavItem]
+            : []),
+          ...(userState.role === "professor_colaborador" ? [myGipNavItem] : []),
+          ...(userState.role === "administrador" ? [adminNavItem] : []),
+        ]
     : publicNavItems;
 
   return (
