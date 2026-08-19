@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -88,32 +89,40 @@ export default async function HomePage() {
     return <PublicHome authenticated={access.authenticated} />;
   }
 
+  if (
+    access.role === "academico_colaborador" ||
+    access.role === "academico_participante"
+  ) {
+    redirect("/meu-gip");
+  }
+
   return <OperationalHome />;
 }
 
 async function getHomeAccess() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return { authenticated: false, approved: false };
+    return { authenticated: false, approved: false, role: null as string | null };
   }
 
   try {
     const supabase = await getSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) return { authenticated: false, approved: false };
+    if (!user) return { authenticated: false, approved: false, role: null as string | null };
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("account_status, active")
+      .select("account_status, active, role")
       .eq("id", user.id)
       .single();
 
     return {
       authenticated: true,
-      approved: profile?.account_status === "aprovado" && profile.active === true
+      approved: profile?.account_status === "aprovado" && profile.active === true,
+      role: profile?.role ?? null,
     };
   } catch {
-    return { authenticated: false, approved: false };
+    return { authenticated: false, approved: false, role: null as string | null };
   }
 }
 

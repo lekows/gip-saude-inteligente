@@ -22,6 +22,10 @@ const homePageSource = readFileSync(
   new URL("../app/page.tsx", import.meta.url),
   "utf8",
 );
+const academicActionsSource = readFileSync(
+  new URL("../app/gestao-academica/actions.ts", import.meta.url),
+  "utf8",
+);
 const mobileScreeningSource = readFileSync(
   new URL("../components/mobile/QuickScreeningCard.tsx", import.meta.url),
   "utf8",
@@ -74,4 +78,20 @@ test("triagem mobile nao coleta nome de paciente", () => {
 test("acoes administrativas nao fazem fallback para update direto em profiles", () => {
   assert.match(adminActionsSource, /supabase\.rpc\("admin_update_profile_/);
   assert.doesNotMatch(adminActionsSource, /\.from\("profiles"\)\s*\.update\(/s);
+});
+
+test("gestão acadêmica valida coordenação no servidor e não usa service role", () => {
+  assert.match(academicActionsSource, /validateAcademicManager\(\)/);
+  assert.match(academicActionsSource, /professor_coordenador/);
+  assert.doesNotMatch(academicActionsSource, /service[_-]?role/i);
+});
+
+test("presença só credita horas para situação presente", () => {
+  assert.match(academicActionsSource, /getCreditedTrainingHours\(/);
+});
+
+test("ações acadêmicas exigem gravação na trilha de auditoria", () => {
+  assert.match(academicActionsSource, /if \(auditError\) throw auditError/g);
+  assert.match(academicActionsSource, /setup_pilot_academic_cycle/);
+  assert.match(academicActionsSource, /save_training_attendance/);
 });
