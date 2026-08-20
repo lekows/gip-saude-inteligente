@@ -46,6 +46,7 @@ type ModuleRow = {
   id: string;
   title: string;
   area: string | null;
+  workload_hours: number | string;
 };
 
 type EnrollmentRow = {
@@ -104,7 +105,10 @@ export async function getAcademicDashboardData(
       .select("id, module_id, title, starts_at, ends_at, location, status")
       .eq("cycle_id", cycleData.id)
       .order("starts_at"),
-    supabase.from("training_modules").select("id, title, area").eq("active", true),
+    supabase
+      .from("training_modules")
+      .select("id, title, area, workload_hours")
+      .eq("active", true),
   ]);
 
   if (membersResult.error) throw membersResult.error;
@@ -181,7 +185,9 @@ export async function getAcademicDashboardData(
       endsAt: trainingClass.ends_at,
       location: trainingClass.location,
       status: trainingClass.status,
-      workloadHours: calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
+      workloadHours: module
+        ? toNumber(module.workload_hours)
+        : calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
       enrolledStudents: classEnrollments.length,
       presentStudents,
       attendancePercent: classEnrollments.length
@@ -220,7 +226,7 @@ export async function getAttendanceRoster(
 
   const { data: moduleData, error: moduleError } = await supabase
     .from("training_modules")
-    .select("id, title, area")
+    .select("id, title, area, workload_hours")
     .eq("id", trainingClass.module_id)
     .single();
   if (moduleError) throw moduleError;
@@ -294,7 +300,7 @@ export async function getAttendanceRoster(
       endsAt: trainingClass.ends_at,
       location: trainingClass.location,
       status: trainingClass.status,
-      workloadHours: calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
+      workloadHours: toNumber(moduleData.workload_hours),
       enrolledStudents: entries.length,
       presentStudents,
       attendancePercent: entries.length
@@ -379,7 +385,7 @@ export async function getStudentJourneyData(
   const modulesResult = moduleIds.length
     ? await supabase
         .from("training_modules")
-        .select("id, title, area")
+        .select("id, title, area, workload_hours")
         .in("id", moduleIds)
     : { data: [], error: null };
   if (modulesResult.error) throw modulesResult.error;

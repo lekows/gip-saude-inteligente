@@ -16,8 +16,8 @@ export function AcademicSetupButton({ configured = false }: { configured?: boole
 
   async function handleSetup() {
     const confirmation = configured
-      ? "Sincronizar os acadêmicos aprovados com a turma e as quatro capacitações?"
-      : "Configurar a turma piloto, as quatro capacitações e vincular os acadêmicos aprovados?";
+      ? "Sincronizar os acadêmicos aprovados com a turma e os cinco encontros?"
+      : "Configurar a turma piloto, o encontro de integração, as quatro capacitações e vincular os acadêmicos aprovados?";
     if (!confirm(confirmation)) {
       return;
     }
