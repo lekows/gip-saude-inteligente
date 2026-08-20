@@ -79,7 +79,7 @@ export default async function AcademicManagementPage() {
                 <Badge className="border-amber-200 bg-amber-50 text-amber-900">Primeira configuração</Badge>
                 <h2 className="mt-3 text-2xl font-semibold">Preparar a turma piloto de 2026</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-                  O início assistido cria o ciclo de 86 horas, quatro capacitações e as matrículas dos acadêmicos que já estiverem aprovados.
+                  O início assistido cria o ciclo de 86 horas, o encontro de integração, quatro capacitações e as matrículas dos acadêmicos que já estiverem aprovados.
                 </p>
                 <div className="mt-5">
                   <AcademicSetupButton />
@@ -189,7 +189,7 @@ export default async function AcademicManagementPage() {
                 <article key={trainingClass.id} className="border border-stone-200 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-folha">CAPACITAÇÃO {index + 1}</p>
+                      <p className="text-xs font-semibold text-folha">ENCONTRO {index + 1}</p>
                       <h3 className="mt-1 font-semibold leading-5">{trainingClass.title}</h3>
                     </div>
                     <StatusBadge status={trainingClass.status} />

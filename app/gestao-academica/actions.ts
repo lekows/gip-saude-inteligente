@@ -17,32 +17,44 @@ const MANAGER_ROLES = ["administrador", "professor_coordenador"];
 
 const pilotTrainings = [
   {
-    title: "Clínica médica aliada à tecnologia",
-    description: "Integração entre raciocínio clínico, prevenção e ferramentas digitais.",
-    area: "Clínica e tecnologia",
-    startsAt: "2026-08-26T18:30:00-03:00",
-    endsAt: "2026-08-26T22:30:00-03:00",
+    title: "Encontro de integração e apresentação do Programa GIP",
+    description: "Acolhimento da turma, apresentação do programa e organização da jornada acadêmica.",
+    area: "Integração",
+    startsAt: "2026-08-12T18:30:00-03:00",
+    endsAt: "2026-08-12T22:30:00-03:00",
+    workloadHours: 10,
   },
   {
-    title: "Inteligência artificial e dados em saúde",
+    title: "Capacitação 1 - Da pergunta clínica à ação territorial",
+    description: "Integração entre raciocínio clínico, prevenção, dados e planejamento territorial.",
+    area: "Clínica e tecnologia",
+    startsAt: "2026-08-19T18:30:00-03:00",
+    endsAt: "2026-08-19T22:30:00-03:00",
+    workloadHours: 10,
+  },
+  {
+    title: "Capacitação 2 - Inteligência artificial e dados em saúde",
     description: "Uso responsável de IA, organização de dados e leitura de indicadores.",
     area: "IA e dados",
-    startsAt: "2026-09-02T18:30:00-03:00",
-    endsAt: "2026-09-02T22:30:00-03:00",
+    startsAt: "2026-08-26T18:30:00-03:00",
+    endsAt: "2026-08-26T22:30:00-03:00",
+    workloadHours: 10,
   },
   {
-    title: "Gestão, 5W2H e instrumentos de coleta",
+    title: "Capacitação 3 - Gestão, 5W2H e instrumentos de coleta",
     description: "Planejamento prático, entrevistas e construção de matrizes de trabalho.",
     area: "Gestão e coleta",
-    startsAt: "2026-09-09T18:30:00-03:00",
-    endsAt: "2026-09-09T22:30:00-03:00",
+    startsAt: "2026-09-02T18:30:00-03:00",
+    endsAt: "2026-09-02T22:30:00-03:00",
+    workloadHours: 10,
   },
   {
-    title: "Inteligência territorial e ação comunitária",
+    title: "Capacitação 4 - Inteligência territorial e ação comunitária",
     description: "Mapas, priorização territorial e preparação das ações de campo.",
     area: "Território e comunidade",
-    startsAt: "2026-09-16T18:30:00-03:00",
-    endsAt: "2026-09-16T22:30:00-03:00",
+    startsAt: "2026-09-09T18:30:00-03:00",
+    endsAt: "2026-09-09T22:30:00-03:00",
+    workloadHours: 10,
   },
 ] as const;
 
@@ -64,7 +76,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
         .insert({
           name: PILOT_CYCLE_NAME,
           description: "Turma piloto de acadêmicos do Programa GIP Saúde Inteligente.",
-          start_date: "2026-08-26",
+          start_date: "2026-08-12",
           end_date: "2026-10-28",
           status: "ativo",
           workload_hours: 86,
@@ -90,7 +102,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
         title: training.title,
         description: training.description,
         area: training.area,
-        workload_hours: 4,
+        workload_hours: training.workloadHours,
         mandatory: true,
         active: true,
         created_by: user.id,
@@ -123,8 +135,8 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
         title: training.title,
         starts_at: training.startsAt,
         ends_at: training.endsAt,
-        location: "Local a confirmar",
-        capacity: 30,
+        location: "UniRV - Campus Luziânia",
+        capacity: 40,
         status: "aberta",
       }));
 
@@ -151,7 +163,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
           profile_id: profile.id,
           member_role: profile.role,
           status: "ativo",
-          joined_at: "2026-08-26",
+          joined_at: "2026-08-12",
           target_workload_hours: 86,
         })),
         { onConflict: "cycle_id,profile_id" },
@@ -198,7 +210,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
     revalidatePath("/meu-gip");
     return {
       success: true,
-      message: `Turma piloto configurada com ${pilotTrainings.length} capacitações e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
+      message: `Turma piloto configurada com um encontro de integração, quatro capacitações e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
     };
   } catch (error) {
     return {
@@ -228,10 +240,17 @@ export async function saveClassAttendance(
 
     const { data: trainingClass, error: classError } = await supabase
       .from("training_classes")
-      .select("id, starts_at, ends_at")
+      .select("id, module_id, starts_at, ends_at")
       .eq("id", classId)
       .single();
     if (classError) throw classError;
+
+    const { data: trainingModule, error: moduleError } = await supabase
+      .from("training_modules")
+      .select("workload_hours")
+      .eq("id", trainingClass.module_id)
+      .single();
+    if (moduleError) throw moduleError;
 
     const { data: validEnrollments, error: enrollmentError } = await supabase
       .from("training_enrollments")
@@ -264,8 +283,7 @@ export async function saveClassAttendance(
           status: "concluido",
           completed_workload_hours: getCreditedTrainingHours(
             record.status,
-            trainingClass.starts_at,
-            trainingClass.ends_at,
+            Number(trainingModule.workload_hours),
           ),
           completed_at: now,
         })

@@ -31,10 +31,8 @@ test("carga horária usa a duração real da capacitação", () => {
 });
 
 test("somente presença confirmada gera horas", () => {
-  const start = "2026-08-26T18:30:00-03:00";
-  const end = "2026-08-26T22:30:00-03:00";
-
-  assert.equal(getCreditedTrainingHours("presente", start, end), 4);
-  assert.equal(getCreditedTrainingHours("ausente", start, end), 0);
-  assert.equal(getCreditedTrainingHours("justificado", start, end), 0);
+  assert.equal(getCreditedTrainingHours("presente", 10), 10);
+  assert.equal(getCreditedTrainingHours("ausente", 10), 0);
+  assert.equal(getCreditedTrainingHours("justificado", 10), 0);
+  assert.equal(getCreditedTrainingHours("presente", Number.NaN), 0);
 });

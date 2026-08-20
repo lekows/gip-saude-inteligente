@@ -13,8 +13,11 @@ export function calculateTrainingHours(startsAt: string, endsAt: string) {
 
 export function getCreditedTrainingHours(
   status: AcademicAttendanceStatus,
-  startsAt: string,
-  endsAt: string,
+  workloadHours: number,
 ) {
-  return status === "presente" ? calculateTrainingHours(startsAt, endsAt) : 0;
+  if (status !== "presente" || !Number.isFinite(workloadHours) || workloadHours <= 0) {
+    return 0;
+  }
+
+  return Math.round(workloadHours * 10) / 10;
 }
