@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { evaluationContext } from "@/lib/evaluations/server";
-import { isUuid, safeEvaluationError, SUGGESTION_CATEGORIES, SUGGESTION_STATUSES, validateAnswers, validateCampaignWindow } from "@/lib/evaluations/rules";
+import { EvaluationInputError, evaluationDateBoundary, isUuid, safeEvaluationError, SUGGESTION_CATEGORIES, SUGGESTION_STATUSES, validateAnswers, validateCampaignWindow } from "@/lib/evaluations/rules";
 import type { EvaluationActionResult, EvaluationAnswers } from "@/types/evaluations";
 
 function refreshEvaluations() {
@@ -10,25 +10,25 @@ function refreshEvaluations() {
   revalidatePath("/gestao-avaliacoes", "layout");
 }
 function id(value: unknown) {
-  if (!isUuid(value)) throw new Error("Identificador inválido.");
+  if (!isUuid(value)) throw new EvaluationInputError("Identificador inválido.");
   return value;
 }
 function textValue(value: unknown, max: number, min = 0) {
-  if (typeof value !== "string" || value.trim().length < min || value.length > max) throw new Error(`Preencha o texto com ${min} a ${max} caracteres.`);
+  if (typeof value !== "string" || value.trim().length < min || value.length > max) throw new EvaluationInputError(`Preencha o texto com ${min} a ${max} caracteres.`);
   return value.trim();
 }
 function databaseFailure(error: unknown): never {
   const code = (error as { code?: string } | null)?.code;
-  if (code === "40001") throw new Error("Esta avaliação mudou em outra aba. Atualize a página antes de salvar novamente.");
-  if (code === "23505") throw new Error("Este registro já foi recebido. Atualize a página para conferir.");
-  throw new Error("Não foi possível gravar. Confira sua participação e o prazo; mantenha o formulário aberto e tente novamente.");
+  if (code === "40001") throw new EvaluationInputError("Esta avaliação mudou em outra aba. Atualize a página antes de salvar novamente.");
+  if (code === "23505") throw new EvaluationInputError("Este registro já foi recebido. Atualize a página para conferir.");
+  throw new EvaluationInputError("Não foi possível gravar. Confira sua participação e o prazo; mantenha o formulário aberto e tente novamente.");
 }
 
 export async function saveSelfEvaluation(expectedRevision: number, input: { campaignId: string; answers: EvaluationAnswers; submit: boolean }): Promise<EvaluationActionResult> {
   try {
     const { supabase } = await evaluationContext();
     const campaignId = id(input.campaignId);
-    if (typeof input.submit !== "boolean" || !Number.isInteger(expectedRevision) || expectedRevision < 0) throw new Error("Envio inválido.");
+    if (typeof input.submit !== "boolean" || !Number.isInteger(expectedRevision) || expectedRevision < 0) throw new EvaluationInputError("Envio inválido.");
     const answers = validateAnswers("self", input.answers, input.submit);
     const { error } = await supabase.rpc("save_evaluation_response", { p_campaign_id: campaignId, p_answers: answers, p_submit: input.submit, p_expected_revision: expectedRevision });
     if (error) databaseFailure(error);
@@ -50,7 +50,7 @@ export async function submitProgramEvaluation(input: { campaignId: string; nonce
 export async function submitSuggestion(input: { nonce: string; category: string; message: string; proposal: string }): Promise<EvaluationActionResult> {
   try {
     const { supabase } = await evaluationContext();
-    if (!SUGGESTION_CATEGORIES.includes(input.category as typeof SUGGESTION_CATEGORIES[number])) throw new Error("Selecione uma categoria válida.");
+    if (!SUGGESTION_CATEGORIES.includes(input.category as typeof SUGGESTION_CATEGORIES[number])) throw new EvaluationInputError("Selecione uma categoria válida.");
     const { error } = await supabase.rpc("submit_anonymous_suggestion", {
       p_nonce: id(input.nonce), p_category: input.category,
       p_message: textValue(input.message, 3000, 10), p_proposal: textValue(input.proposal, 1500),
@@ -64,11 +64,11 @@ export async function createEvaluationCampaign(form: FormData): Promise<Evaluati
   try {
     const { supabase, user } = await evaluationContext("manager");
     const kind = form.get("kind"), stage = form.get("stage"), status = form.get("status");
-    if (!(kind === "self" || kind === "program") || !["initial", "module", "final"].includes(String(stage)) || !["draft", "open"].includes(String(status))) throw new Error("Configuração inválida.");
-    const opensAt = dateBoundary(form.get("opens_at"), false), closesAt = dateBoundary(form.get("closes_at"), true);
+    if (!(kind === "self" || kind === "program") || !["initial", "module", "final"].includes(String(stage)) || !["draft", "open"].includes(String(status))) throw new EvaluationInputError("Configuração inválida.");
+    const opensAt = evaluationDateBoundary(form.get("opens_at"), false), closesAt = evaluationDateBoundary(form.get("closes_at"), true);
     validateCampaignWindow(opensAt, closesAt);
     const classId = form.get("class_id") ? id(form.get("class_id")) : null;
-    if (stage === "module" && !classId) throw new Error("Selecione a capacitação para avaliar um módulo.");
+    if (stage === "module" && !classId) throw new EvaluationInputError("Selecione a capacitação para avaliar um módulo.");
     const { error } = await supabase.from("evaluation_campaigns").insert({
       title: textValue(form.get("title"), 160, 5), cycle_id: id(form.get("cycle_id")), class_id: classId,
       kind, stage, status, opens_at: opensAt, closes_at: closesAt, version: 1, created_by: user.id,
@@ -79,19 +79,13 @@ export async function createEvaluationCampaign(form: FormData): Promise<Evaluati
   } catch (error) { return { error: safeEvaluationError(error) }; }
 }
 
-function dateBoundary(value: unknown, end: boolean) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Informe uma data válida.");
-  const result = `${value}T${end ? "23:59:59" : "00:00:00"}-03:00`;
-  if (!Number.isFinite(Date.parse(result))) throw new Error("Informe uma data válida.");
-  return result;
-}
 
 export async function changeCampaignWindow(campaignId: string, form: FormData): Promise<EvaluationActionResult> {
   try {
     const { supabase } = await evaluationContext("manager");
     const status = String(form.get("status"));
-    if (!["open", "closed"].includes(status)) throw new Error("Situação inválida.");
-    const update = status === "closed" ? { status } : { status, opens_at: dateBoundary(form.get("opens_at"), false), closes_at: dateBoundary(form.get("closes_at"), true) };
+    if (!["open", "closed"].includes(status)) throw new EvaluationInputError("Situação inválida.");
+    const update = status === "closed" ? { status } : { status, opens_at: evaluationDateBoundary(form.get("opens_at"), false), closes_at: evaluationDateBoundary(form.get("closes_at"), true) };
     if ("opens_at" in update) validateCampaignWindow(update.opens_at!, update.closes_at!);
     const { data, error } = await supabase.from("evaluation_campaigns").update(update).eq("id", id(campaignId)).select("id").single();
     if (error || !data) databaseFailure(error);
@@ -124,12 +118,12 @@ export async function reviewSuggestion(suggestionId: string, form: FormData): Pr
   try {
     const { supabase } = await evaluationContext("manager");
     const status = String(form.get("status"));
-    if (!(status in SUGGESTION_STATUSES)) throw new Error("Situação inválida.");
+    if (!(Object.hasOwn(SUGGESTION_STATUSES, status))) throw new EvaluationInputError("Situação inválida.");
     const publish = form.get("publish") === "on";
     const resolution = textValue(form.get("resolution_summary") ?? "", 1500, publish || status === "declined" ? 10 : 0);
     const summary = textValue(form.get("public_summary") ?? "", 1000, publish ? 10 : 0);
     const dueDate = form.get("due_date") || null;
-    if (dueDate !== null) dateBoundary(dueDate, false);
+    if (dueDate !== null) evaluationDateBoundary(dueDate, false);
     const { error } = await supabase.rpc("review_anonymous_suggestion", {
       p_suggestion_id: id(suggestionId), p_status: status, p_resolution_summary: resolution,
       p_owner_label: textValue(form.get("owner_label") ?? "", 120), p_due_date: dueDate,

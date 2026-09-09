@@ -7,6 +7,7 @@ import {
   Activity,
   BookOpen,
   GraduationCap,
+  ClipboardCheck,
   Database,
   FileUp,
   Home,
@@ -52,6 +53,8 @@ const academicManagementNavItem = {
   icon: GraduationCap,
 };
 const myGipNavItem = { href: "/meu-gip", label: "Meu GIP", icon: GraduationCap };
+const evaluationsNavItem = { href: "/avaliacoes", label: "Avaliações", icon: ClipboardCheck };
+const evaluationManagementNavItem = { href: "/gestao-avaliacoes", label: "Avaliações", icon: ClipboardCheck };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -105,13 +108,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Filtrar os itens de menu baseados nas permissões/papel
   const activeNavItems = showProtectedNav
     ? isAcademic
-      ? [protectedNavItems[0], myGipNavItem, protectedNavItems[8]]
+      ? [protectedNavItems[0], myGipNavItem, evaluationsNavItem, protectedNavItems[8]]
       : [
           ...protectedNavItems,
           ...(userState.role === "administrador" || userState.role === "professor_coordenador"
             ? [academicManagementNavItem]
             : []),
           ...(userState.role === "professor_colaborador" ? [myGipNavItem] : []),
+          ...(["administrador", "professor_coordenador", "professor_colaborador"].includes(userState.role || "") ? [evaluationManagementNavItem] : []),
           ...(userState.role === "administrador" ? [adminNavItem] : []),
         ]
     : publicNavItems;

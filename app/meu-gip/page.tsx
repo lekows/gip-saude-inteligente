@@ -53,6 +53,11 @@ export default async function MyGipPage() {
           </div>
         </header>
 
+        <Link href="/avaliacoes" className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-green-200 bg-green-50 px-5 py-4 text-folha">
+          <span><strong className="block">Avaliações e sugestões</strong><span className="mt-1 block text-sm">Registre seu aprendizado, consulte devolutivas e contribua com melhorias.</span></span>
+          <ArrowRight size={22} className="shrink-0" />
+        </Link>
+
         {!journey.cycle ? (
           <section className="mt-6 border border-stone-200 bg-white p-6 sm:p-8">
             <UserRoundCheck size={28} className="text-folha" />

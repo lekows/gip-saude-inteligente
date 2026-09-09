@@ -1,5 +1,7 @@
 import type { EvaluationAnswers, EvaluationCampaign, EvaluationKind } from "../../types/evaluations.ts";
 
+export class EvaluationInputError extends Error {}
+
 export const SELF_RATINGS = {
   comprehension: "Compreensão dos conteúdos", confidence: "Segurança nas atividades",
   participation: "Participação e colaboração", communication: "Comunicação e postura ética",
@@ -24,27 +26,27 @@ export function isUuid(value: unknown): value is string {
 }
 
 export function validateAnswers(kind: EvaluationKind, value: unknown, submit: boolean): EvaluationAnswers {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Respostas inválidas.");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new EvaluationInputError("Respostas inválidas.");
   const source = value as Record<string, unknown>;
   const ratings = kind === "self" ? SELF_RATINGS : PROGRAM_RATINGS;
   const allowed = new Set([...Object.keys(ratings), ...(kind === "self" ? Object.keys(SELF_TEXTS) : [])]);
-  if (Object.keys(source).some((key) => !allowed.has(key))) throw new Error("O formulário contém campos desconhecidos.");
+  if (Object.keys(source).some((key) => !allowed.has(key))) throw new EvaluationInputError("O formulário contém campos desconhecidos.");
   const result: EvaluationAnswers = {};
   for (const key of Object.keys(ratings)) {
     if (!(key in source)) {
-      if (submit) throw new Error("Responda todos os itens ou selecione não se aplica.");
+      if (submit) throw new EvaluationInputError("Responda todos os itens ou selecione não se aplica.");
       continue;
     }
     const rating = source[key];
     if (rating !== null && (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5)) {
-      throw new Error("Use notas de 1 a 5 ou não se aplica.");
+      throw new EvaluationInputError("Use notas de 1 a 5 ou não se aplica.");
     }
     result[key] = rating as number | null;
   }
   if (kind === "self") {
     for (const key of Object.keys(SELF_TEXTS)) {
       const raw = source[key] ?? "";
-      if (typeof raw !== "string" || raw.length > 1500) throw new Error("Cada texto pode ter até 1.500 caracteres.");
+      if (typeof raw !== "string" || raw.length > 1500) throw new EvaluationInputError("Cada texto pode ter até 1.500 caracteres.");
       result[key] = raw.trim();
     }
   }
@@ -58,7 +60,7 @@ export function isCampaignOpen(campaign: Pick<EvaluationCampaign, "status" | "op
 export function validateCampaignWindow(opensAt: string, closesAt: string) {
   const start = Date.parse(opensAt), end = Date.parse(closesAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-    throw new Error("O encerramento deve ser posterior à abertura.");
+    throw new EvaluationInputError("O encerramento deve ser posterior à abertura.");
   }
 }
 
@@ -72,5 +74,12 @@ export function canReviewEvaluations(role: string) {
 
 export function safeEvaluationError(error: unknown) {
   // Validation messages created by the application are safe; database messages can contain answers.
-  return error instanceof Error ? error.message : "Não foi possível concluir. Tente novamente; suas respostas continuam no formulário.";
+  return error instanceof EvaluationInputError ? error.message : "Não foi possível concluir. Tente novamente; suas respostas continuam no formulário.";
+}
+
+export function evaluationDateBoundary(value: unknown, end: boolean) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new EvaluationInputError("Informe uma data válida.");
+  const utc = new Date(`${value}T12:00:00Z`);
+  if (!Number.isFinite(utc.getTime()) || utc.toISOString().slice(0, 10) !== value) throw new EvaluationInputError("Informe uma data válida.");
+  return `${value}T${end ? "23:59:59" : "00:00:00"}-03:00`;
 }
