@@ -192,11 +192,14 @@ select pg_temp.expect_error('select public.submit_anonymous_program_evaluation(p
 select pg_temp.expect_error('select public.submit_anonymous_program_evaluation(pg_temp.f(111),pg_temp.program_answers() || ''{"comment":"identifiable text"}''::jsonb,gen_random_uuid())', '23514', 'program ratings reject free text');
 select public.submit_anonymous_program_evaluation(pg_temp.f(111),pg_temp.program_answers(),pg_temp.f(200));
 select public.submit_anonymous_program_evaluation(pg_temp.f(111),pg_temp.program_answers(),pg_temp.f(200));
+select pg_temp.expect_error('select public.submit_anonymous_program_evaluation(pg_temp.f(111),pg_temp.program_answers() || ''{"content":1}''::jsonb,pg_temp.f(200))', '23514', 'nonce cannot silently replace program content');
+select pg_temp.expect_error('select public.submit_anonymous_program_evaluation(pg_temp.f(117),pg_temp.program_answers(),pg_temp.f(200))', '23514', 'nonce cannot silently drop another campaign submission');
 select public.submit_anonymous_program_evaluation(pg_temp.f(117),pg_temp.program_answers(),pg_temp.f(205));
 select pg_temp.expect_error('select * from public.anonymous_program_responses', '42501', 'student cannot read raw anonymous ratings');
 select pg_temp.expect_error('select public.get_program_evaluation_summary(pg_temp.f(111))', '42501', 'student cannot query reviewer aggregate');
 select public.submit_anonymous_suggestion('site','Texto sintetico original restrito a coordenacao.','Melhorar a navegacao.',pg_temp.f(210));
 select public.submit_anonymous_suggestion('site','Texto sintetico original restrito a coordenacao.','Melhorar a navegacao.',pg_temp.f(210));
+select pg_temp.expect_error('select public.submit_anonymous_suggestion(''site'',''Conteudo diferente para o mesmo envio.'',null,pg_temp.f(210))', '23514', 'nonce cannot silently replace suggestion content');
 select pg_temp.assert_true((select count(*)=0 from public.anonymous_suggestions), 'student cannot read raw suggestions including own');
 select pg_temp.assert_true((select count(*)=0 from public.suggestion_publications), 'unreviewed suggestion is not published');
 select pg_temp.expect_error('select public.submit_anonymous_suggestion(''site'',''curto'',null,gen_random_uuid())', '23514', 'short suggestion rejected');
@@ -221,9 +224,13 @@ select pg_temp.assert_true(public.get_program_evaluation_summary(pg_temp.f(111))
 select pg_temp.expect_error('update public.evaluation_campaigns set status=''open'' where id=pg_temp.f(111)', '23514', 'closed program cannot reopen for differencing');
 select pg_temp.expect_error('update public.evaluation_campaigns set class_id=null where id=pg_temp.f(110)', '23514', 'published scope cannot change');
 select pg_temp.expect_error('insert into public.evaluation_campaigns(cycle_id,class_id,title,kind,stage,opens_at,closes_at) values(pg_temp.f(109),pg_temp.f(102),''Turma de outro ciclo'',''self'',''module'',now(),now()+interval ''1 day'')', '23514', 'class must belong to campaign cycle');
+select pg_temp.expect_error('insert into public.evaluation_campaigns(cycle_id,title,kind,stage,opens_at,closes_at) values(pg_temp.f(100),''Modulo sem turma'',''self'',''module'',now(),now()+interval ''1 day'')', '23514', 'module campaign requires a class');
+select pg_temp.assert_true((select count(*)=2 from public.audit_logs where entity_id=pg_temp.f(111)::text and action in ('create_evaluation_campaign','update_evaluation_campaign')), 'campaign creation and closure audited');
+select pg_temp.assert_true((select count(*)=1 from public.audit_logs where actor_id=pg_temp.f(3) and action='add_evaluation_feedback' and not metadata ? 'message'), 'feedback audit omits pedagogical text');
 select pg_temp.assert_true((select count(*)=1 from public.anonymous_suggestions where nonce=pg_temp.f(210)), 'suggestion retry de-duplicated');
 select pg_temp.assert_true((select submitted_month=date_trunc('month',now() at time zone 'America/Sao_Paulo')::date from public.anonymous_suggestions where nonce=pg_temp.f(210)), 'suggestions retain month only');
 select pg_temp.expect_error('select public.review_anonymous_suggestion((select id from public.anonymous_suggestions where nonce=pg_temp.f(210)),''declined'',null,null,null,true,''Sintese revisada de teste.'')', '23514', 'decline requires reviewed justification');
+select pg_temp.expect_error('select public.review_anonymous_suggestion((select id from public.anonymous_suggestions where nonce=pg_temp.f(210)),''planned'',''Melhoria planejada.'',null,null,true,''Sintese revisada de teste.'')', '23514', 'planned publication requires owner and due date');
 select public.review_anonymous_suggestion((select id from public.anonymous_suggestions where nonce=pg_temp.f(210)),
   'planned','A navegacao sera simplificada.','Coordenacao GIP',current_date+30,true,'Facilitar o acesso aos materiais.');
 select pg_temp.login(5);
@@ -236,6 +243,28 @@ select pg_temp.assert_true((select count(*)=0 from public.anonymous_suggestions)
 select pg_temp.expect_error('select public.get_program_evaluation_summary(pg_temp.f(111))', '42501', 'unrelated management permission does not authorize aggregate');
 select pg_temp.login(5);
 select pg_temp.expect_error('select public.submit_anonymous_program_evaluation(pg_temp.f(111),pg_temp.program_answers(),gen_random_uuid())', '23514', 'closed program rejects new data');
+
+-- Flood protection shares a counter per channel, never an account identifier.
+select pg_temp.expect_error('select * from private.evaluation_submission_limits', '42501', 'submission budgets are private');
+select pg_temp.expect_error('select private.consume_anonymous_submission_budget(''suggestion'')', '42501', 'client cannot manipulate shared budget directly');
+reset role;
+select pg_temp.assert_true((select submission_count=1 from private.evaluation_submission_limits where bucket='suggestion'), 'retry does not consume a second budget unit');
+select pg_temp.assert_true(not exists(select 1 from information_schema.columns where table_schema='private'
+  and table_name='evaluation_submission_limits' and column_name in ('profile_id','user_id','ip','campaign_id','suggestion_id','nonce')), 'budget does not track author or payload');
+update private.evaluation_submission_limits set window_start=date_trunc('minute',statement_timestamp()), submission_count=119 where bucket='suggestion';
+set local role authenticated;
+select pg_temp.login(5);
+select public.submit_anonymous_suggestion('site','Ultimo envio do limite global sintetico.',null,pg_temp.f(211));
+select pg_temp.expect_error('select public.submit_anonymous_suggestion(''site'',''Envio excede o limite global sintetico.'',null,pg_temp.f(212))', '54000', 'flood exceeding shared budget rejected');
+select public.submit_anonymous_suggestion('site','Ultimo envio do limite global sintetico.',null,pg_temp.f(211));
+reset role;
+select pg_temp.assert_true((select submission_count=120 from private.evaluation_submission_limits where bucket='suggestion'), 'last allowed submission is atomic and retry idempotent');
+update private.evaluation_submission_limits set window_start=date_trunc('minute',statement_timestamp())-interval '1 minute' where bucket='suggestion';
+set local role authenticated;
+select public.submit_anonymous_suggestion('site','Envio de nova janela global sintetica.',null,pg_temp.f(213));
+reset role;
+select pg_temp.assert_true((select submission_count=1 from private.evaluation_submission_limits where bucket='suggestion'), 'new time window resets shared counter');
+set local role authenticated;
 
 -- Leaving a course does not erase the student's own historical learning record.
 reset role;

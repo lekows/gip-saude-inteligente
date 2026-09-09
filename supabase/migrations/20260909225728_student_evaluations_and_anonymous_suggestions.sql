@@ -17,7 +17,8 @@ create table public.evaluation_campaigns (
   created_by uuid not null default auth.uid() references public.profiles(id) on delete restrict,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (closes_at > opens_at)
+  check (closes_at > opens_at),
+  check (stage <> 'module' or class_id is not null)
 );
 
 create table public.evaluation_responses (
@@ -84,6 +85,33 @@ create table public.suggestion_publications (
   due_date date,
   published_month date not null
 );
+
+-- Two shared counters cap automated floods without creating an author ledger.
+-- Only the current minute is retained; no suggestion, campaign or account ID.
+create table private.evaluation_submission_limits (
+  bucket text primary key check (bucket in ('program', 'suggestion')),
+  window_start timestamptz not null,
+  submission_count integer not null check (submission_count between 1 and 120)
+);
+alter table private.evaluation_submission_limits enable row level security;
+revoke all on private.evaluation_submission_limits from public, anon, authenticated;
+
+create function private.consume_anonymous_submission_budget(p_bucket text)
+returns void language plpgsql security invoker set search_path = '' as $$
+begin
+  if auth.uid() is null or not private.is_approved_user() then
+    raise exception 'Acesso nao autorizado.' using errcode = '42501'; end if;
+  insert into private.evaluation_submission_limits(bucket, window_start, submission_count)
+    values (p_bucket, date_trunc('minute', statement_timestamp()), 1)
+    on conflict (bucket) do update set
+      window_start = excluded.window_start,
+      submission_count = case when evaluation_submission_limits.window_start <> excluded.window_start
+        then 1 else evaluation_submission_limits.submission_count + 1 end
+    where evaluation_submission_limits.window_start <> excluded.window_start
+      or evaluation_submission_limits.submission_count < 120;
+  if not found then raise exception 'Muitos envios neste momento. Aguarde um minuto e tente novamente.' using errcode = '54000'; end if;
+end;
+$$;
 
 create index evaluation_campaigns_cycle_idx on public.evaluation_campaigns(cycle_id);
 create index evaluation_campaigns_class_idx on public.evaluation_campaigns(class_id);
@@ -213,6 +241,9 @@ begin
     ) then raise exception 'Escopo de campanha publicada e imutavel.' using errcode = '23514'; end if;
   end if;
   new.updated_at := now();
+  insert into public.audit_logs(actor_id, action, entity_type, entity_id, metadata)
+    values (auth.uid(), case when tg_op = 'INSERT' then 'create_evaluation_campaign' else 'update_evaluation_campaign' end,
+      'evaluation_campaign', new.id::text, jsonb_build_object('kind', new.kind, 'stage', new.stage, 'status', new.status, 'version', new.version));
   return new;
 end;
 $$;
@@ -299,13 +330,16 @@ begin
     raise exception 'Envie a avaliacao antes da devolutiva.' using errcode = '23514'; end if;
   insert into public.evaluation_feedback(response_id, author_id, message)
     values (p_response_id, auth.uid(), btrim(p_message)) returning id into v_id;
+  insert into public.audit_logs(actor_id, action, entity_type, entity_id, metadata)
+    values (auth.uid(), 'add_evaluation_feedback', 'evaluation_response', p_response_id::text,
+      jsonb_build_object('feedback_id', v_id));
   return v_id;
 end;
 $$;
 
 create function private.submit_anonymous_program_evaluation(p_campaign_id uuid, p_answers jsonb, p_nonce uuid)
 returns boolean language plpgsql security definer set search_path = '' as $$
-declare v_campaign public.evaluation_campaigns;
+declare v_campaign public.evaluation_campaigns; v_existing public.anonymous_program_responses;
 begin
   if auth.uid() is null or not private.can_participate_evaluation(p_campaign_id) then
     raise exception 'Participacao nao autorizada.' using errcode = '42501'; end if;
@@ -315,14 +349,22 @@ begin
     raise exception 'Avaliacao fora do periodo de preenchimento.' using errcode = '23514'; end if;
   if p_nonce is null or not private.valid_evaluation_answers('program', p_answers, true) then
     raise exception 'Respostas invalidas.' using errcode = '23514'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('gip_program_nonce:' || p_nonce::text, 0));
+  select * into v_existing from public.anonymous_program_responses where nonce = p_nonce;
+  if found then
+    if v_existing.campaign_id = p_campaign_id and v_existing.answers = p_answers then return true; end if;
+    raise exception 'Identificador de envio ja utilizado. Atualize o formulario.' using errcode = '23514';
+  end if;
+  perform private.consume_anonymous_submission_budget('program');
   insert into public.anonymous_program_responses(nonce, campaign_id, answers)
-    values (p_nonce, p_campaign_id, p_answers) on conflict (nonce) do nothing;
+    values (p_nonce, p_campaign_id, p_answers);
   return true;
 end;
 $$;
 
 create function private.submit_anonymous_suggestion(p_category text, p_message text, p_proposal text, p_nonce uuid)
 returns boolean language plpgsql security definer set search_path = '' as $$
+declare v_existing public.anonymous_suggestions;
 begin
   if auth.uid() is null or not private.is_approved_user() or not exists (
     select 1 from public.program_members pm join public.program_cycles pc on pc.id = pm.cycle_id
@@ -332,8 +374,16 @@ begin
       and p.role in ('academico_colaborador', 'academico_participante')
   ) then raise exception 'Participacao nao autorizada.' using errcode = '42501'; end if;
   if p_nonce is null then raise exception 'Identificador de envio necessario.' using errcode = '23514'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('gip_suggestion_nonce:' || p_nonce::text, 0));
+  select * into v_existing from public.anonymous_suggestions where nonce = p_nonce;
+  if found then
+    if v_existing.category = p_category and v_existing.message = btrim(p_message)
+      and v_existing.proposal is not distinct from nullif(btrim(p_proposal), '') then return true; end if;
+    raise exception 'Identificador de envio ja utilizado. Atualize o formulario.' using errcode = '23514';
+  end if;
+  perform private.consume_anonymous_submission_budget('suggestion');
   insert into public.anonymous_suggestions(nonce, category, message, proposal)
-    values (p_nonce, p_category, btrim(p_message), nullif(btrim(p_proposal), '')) on conflict (nonce) do nothing;
+    values (p_nonce, p_category, btrim(p_message), nullif(btrim(p_proposal), ''));
   return true;
 end;
 $$;
@@ -352,6 +402,8 @@ begin
     raise exception 'Informe a devolutiva revisada.' using errcode = '23514'; end if;
   if p_publish and (p_status = 'received' or p_public_summary is null or char_length(btrim(p_public_summary)) not between 10 and 1000) then
     raise exception 'Revise a sugestao e escreva uma sintese antes de publicar.' using errcode = '23514'; end if;
+  if p_publish and p_status = 'planned' and (p_owner_label is null or char_length(btrim(p_owner_label)) < 3 or p_due_date is null) then
+    raise exception 'Informe responsavel e prazo para a melhoria planejada.' using errcode = '23514'; end if;
   select * into v_suggestion from public.anonymous_suggestions where id = p_suggestion_id for update;
   if not found then raise exception 'Sugestao nao encontrada.' using errcode = '23514'; end if;
   update public.anonymous_suggestions set status = p_status, resolution_summary = nullif(btrim(p_resolution_summary), ''),
@@ -498,14 +550,15 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where (n.nspname = 'private' and p.proname in (
       'is_evaluation_manager', 'can_review_evaluation', 'can_participate_evaluation',
-      'can_read_evaluation_campaign', 'can_read_evaluation_response', 'valid_evaluation_answers', 'guard_evaluation_campaign'))
+      'can_read_evaluation_campaign', 'can_read_evaluation_response', 'valid_evaluation_answers', 'guard_evaluation_campaign',
+      'consume_anonymous_submission_budget'))
       or (n.nspname in ('private', 'public') and p.proname in (
       'save_evaluation_response', 'reopen_evaluation_response', 'add_evaluation_feedback',
       'submit_anonymous_program_evaluation', 'submit_anonymous_suggestion',
       'review_anonymous_suggestion', 'get_program_evaluation_summary', 'get_evaluation_roster'))
   loop
     execute format('revoke all on function %I.%I(%s) from public, anon, authenticated', v_function.nspname, v_function.proname, v_function.args);
-    if v_function.proname not in ('valid_evaluation_answers', 'guard_evaluation_campaign') then
+    if v_function.proname not in ('valid_evaluation_answers', 'guard_evaluation_campaign', 'consume_anonymous_submission_budget') then
       execute format('grant execute on function %I.%I(%s) to authenticated', v_function.nspname, v_function.proname, v_function.args);
     end if;
   end loop;
