@@ -3,8 +3,11 @@ import test from "node:test";
 import {
   canManageEvaluations,
   canReviewEvaluations,
+  EvaluationInputError,
+  evaluationDateBoundary,
   isCampaignOpen,
   isUuid,
+  safeEvaluationError,
   validateAnswers,
   validateCampaignWindow,
 } from "../lib/evaluations/rules.ts";
@@ -123,5 +126,68 @@ test("identificadores precisam de UUID completo e variante válida", () => {
   assert.equal(isUuid("ABCDEFAB-1234-4ABC-A123-ABCDEFABCDEF"), true);
   for (const value of [null, undefined, 1, "", "99999999-9999-4999-8999", "99999999-9999-0999-8999-999999999999", "99999999-9999-4999-0999-999999999999", " 99999999-9999-4999-8999-999999999999", "99999999-9999-4999-8999-999999999999;drop table"]) {
     assert.equal(isUuid(value), false);
+  }
+});
+
+test("erros de SDK, transporte e banco não expõem conteúdo das respostas", () => {
+  const privateMarker = "conteudo-restrito-da-sugestao-sintetica";
+  const fallback = safeEvaluationError(null);
+  for (const error of [
+    new Error(`Database rejected payload: ${privateMarker}`),
+    new TypeError(`Failed to fetch: ${privateMarker}`),
+    { message: privateMarker, code: "23514", details: privateMarker },
+    { name: "EvaluationInputError", message: privateMarker },
+    privateMarker,
+    undefined,
+  ]) {
+    assert.equal(safeEvaluationError(error), fallback);
+    assert.doesNotMatch(safeEvaluationError(error), new RegExp(privateMarker));
+  }
+  assert.match(fallback, /Tente novamente/);
+});
+
+test("validação própria preserva orientação útil sem incluir a resposta inválida", () => {
+  const privateMarker = "resposta-sintetica-invalida";
+  try {
+    validateAnswers("self", { ...selfAnswers, comprehension: privateMarker }, true);
+    assert.fail("A resposta precisa ser rejeitada.");
+  } catch (error) {
+    assert.ok(error instanceof EvaluationInputError);
+    assert.match(safeEvaluationError(error), /notas de 1 a 5/);
+    assert.doesNotMatch(safeEvaluationError(error), new RegExp(privateMarker));
+  }
+  assert.equal(safeEvaluationError(new EvaluationInputError("Selecione uma categoria válida.")), "Selecione uma categoria válida.");
+});
+
+test("datas civis impossíveis não são normalizadas para outro mês", () => {
+  for (const date of ["2026-02-29", "2026-02-30", "2026-02-31", "2026-04-31", "1900-02-29", "2100-02-29", "2026-13-01", "2026-00-01", "2026-09-00", "2026-09-32"]) {
+    for (const end of [false, true]) {
+      assert.throws(() => evaluationDateBoundary(date, end), EvaluationInputError);
+    }
+  }
+});
+
+test("datas bissextas válidas preservam o dia selecionado", () => {
+  for (const date of ["2024-02-29", "2028-02-29", "2000-02-29", "2026-04-30", "2026-12-31"]) {
+    assert.equal(evaluationDateBoundary(date, false).slice(0, 10), date);
+    assert.equal(evaluationDateBoundary(date, true).slice(0, 10), date);
+  }
+});
+
+test("períodos usam o dia local de Brasília, inclusive ao atravessar o mês em UTC", () => {
+  const opening = evaluationDateBoundary("2026-09-30", false);
+  const closing = evaluationDateBoundary("2026-09-30", true);
+  assert.equal(new Date(opening).toISOString(), "2026-09-30T03:00:00.000Z");
+  assert.equal(new Date(closing).toISOString(), "2026-10-01T02:59:59.000Z");
+  assert.doesNotThrow(() => validateCampaignWindow(opening, closing));
+  const campaign = { status: "open", opens_at: opening, closes_at: closing };
+  assert.equal(isCampaignOpen(campaign, Date.parse("2026-09-30T02:59:59Z")), false);
+  assert.equal(isCampaignOpen(campaign, Date.parse("2026-10-01T02:59:58Z")), true);
+  assert.equal(isCampaignOpen(campaign, Date.parse("2026-10-01T03:00:00Z")), false);
+});
+
+test("limites de data rejeitam formatos ambíguos e entradas de outro tipo", () => {
+  for (const value of [null, undefined, 20260909, {}, "", "09/09/2026", "2026-9-9", "2026-09-09 ", "2026-09-09T12:00:00Z", "2026-09-09T00:00:00-03:00"]) {
+    assert.throws(() => evaluationDateBoundary(value, false), EvaluationInputError);
   }
 });
