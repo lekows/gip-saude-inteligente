@@ -283,4 +283,34 @@ select pg_temp.assert_true((select count(*)=0 from public.audit_logs where actor
 select pg_temp.assert_true((select count(*)=5 from public.anonymous_program_responses where campaign_id=pg_temp.f(111)), 'underlying submission count is stable');
 select pg_temp.assert_true((select count(*)=0 from public.evaluation_responses where campaign_id=pg_temp.f(111)), 'program never creates an identified response');
 
+-- The simplified course format uses the same authorization, revision and history rules.
+select pg_temp.assert_true(not exists(select 1 from information_schema.columns where table_schema='public'
+  and table_name='anonymous_suggestions' and column_name in ('campaign_id','response_id','evaluation_id','enrollment_id','class_id','member_id')),
+  'anonymous course suggestions cannot link back to the identified evaluation or enrollment');
+set local role authenticated;
+select pg_temp.login(14);
+select public.save_evaluation_response(pg_temp.f(110), '{"course_review":"Comentario sintetico valido"}'::jsonb, false, 0);
+select pg_temp.assert_true((select status='draft' and revision=1 and answers->>'course_review'='Comentario sintetico valido' from public.evaluation_responses where campaign_id=pg_temp.f(110)), 'course comment draft survives without a rating');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_review":""}''::jsonb,true,1)', '23514', 'course final needs stars');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":null}''::jsonb,true,1)', '23514', 'course stars do not accept N/A');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":"4"}''::jsonb,true,1)', '23514', 'course stars cannot be text');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":6}''::jsonb,true,1)', '23514', 'course stars upper bound');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":0}''::jsonb,true,1)', '23514', 'course stars lower bound');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":2.5}''::jsonb,true,1)', '23514', 'course stars must be whole');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":4,"learning":"old"}''::jsonb,true,1)', '23514', 'course cannot mix legacy questions');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),jsonb_build_object(''course_rating'',4,''course_review'',repeat(''x'',1501)),true,1)', '23514', 'course comment length enforced by database');
+select public.save_evaluation_response(pg_temp.f(110), '{"course_rating":4,"course_review":"Comentario sintetico valido"}'::jsonb, true, 1);
+select public.save_evaluation_response(pg_temp.f(110), '{"course_rating":4,"course_review":"Comentario sintetico valido"}'::jsonb, true, 1);
+select pg_temp.assert_true((select count(*)=1 from public.evaluation_response_versions where answers='{"course_rating":4,"course_review":"Comentario sintetico valido"}'::jsonb), 'course submission preserves exact answers and retry adds no duplicate');
+select pg_temp.login(15);
+select pg_temp.assert_true((select count(*)=0 from public.evaluation_responses where campaign_id=pg_temp.f(110)), 'peer cannot read course feedback');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":5}''::jsonb,true,0)', '23514', 'course review required');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),''{"course_rating":5,"course_review":"muito curto"}''::jsonb,true,0)', '23514', 'course review minimum length');
+select pg_temp.expect_error('select public.save_evaluation_response(pg_temp.f(110),jsonb_build_object(''course_rating'',5,''course_review'',repeat('' '',30)||''curto''||chr(10)),true,0)', '23514', 'whitespace cannot satisfy course minimum');
+select public.save_evaluation_response(pg_temp.f(110), jsonb_build_object('course_rating',5,'course_review',repeat('x',20)), true, 0);
+select pg_temp.assert_true((select status='submitted' and answers=jsonb_build_object('course_rating',5,'course_review',repeat('x',20)) from public.evaluation_responses where campaign_id=pg_temp.f(110)), 'course accepts exactly twenty comment characters');
+select pg_temp.login(3);
+select pg_temp.assert_true((select count(*)=2 from public.evaluation_responses where campaign_id=pg_temp.f(110) and answers ? 'course_rating'), 'assigned reviewer sees submitted course feedback');
+reset role;
+
 rollback;

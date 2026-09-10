@@ -1,6 +1,16 @@
-import type { EvaluationAnswers, EvaluationCampaign, EvaluationKind } from "../../types/evaluations.ts";
+import type { CourseEvaluationAnswers, EvaluationAnswers, EvaluationCampaign, EvaluationKind } from "../../types/evaluations.ts";
 
 export class EvaluationInputError extends Error {}
+export const COURSE_REVIEW_MIN_LENGTH = 20;
+
+export const COURSE_FIELDS = {
+  course_rating: "Classificação do curso",
+  course_review: "Avaliação do curso",
+} as const;
+
+export function isCourseEvaluation(answers: EvaluationAnswers) {
+  return Object.hasOwn(answers, "course_rating") || Object.hasOwn(answers, "course_review");
+}
 
 export const SELF_RATINGS = {
   comprehension: "Compreensão dos conteúdos", confidence: "Segurança nas atividades",
@@ -28,6 +38,20 @@ export function isUuid(value: unknown): value is string {
 export function validateAnswers(kind: EvaluationKind, value: unknown, submit: boolean): EvaluationAnswers {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new EvaluationInputError("Respostas inválidas.");
   const source = value as Record<string, unknown>;
+  if (kind === "self" && (Object.hasOwn(source, "course_rating") || Object.hasOwn(source, "course_review"))) {
+    if (Object.keys(source).some((key) => !Object.hasOwn(COURSE_FIELDS, key))) throw new EvaluationInputError("O formulário contém campos desconhecidos.");
+    const result: CourseEvaluationAnswers = { course_review: "" };
+    if (Object.hasOwn(source, "course_rating")) {
+      const rating = source.course_rating;
+      if (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5) throw new EvaluationInputError("Selecione de 1 a 5 estrelas.");
+      result.course_rating = rating;
+    } else if (submit) throw new EvaluationInputError("Selecione de 1 a 5 estrelas.");
+    const review = source.course_review ?? "";
+    if (typeof review !== "string" || review.length > 1500) throw new EvaluationInputError("A avaliação pode ter até 1.500 caracteres.");
+    result.course_review = review.trim();
+    if (submit && result.course_review.length < COURSE_REVIEW_MIN_LENGTH) throw new EvaluationInputError(`Escreva pelo menos ${COURSE_REVIEW_MIN_LENGTH} caracteres sobre o curso, sem contar espaços no início e no fim.`);
+    return result;
+  }
   const ratings = kind === "self" ? SELF_RATINGS : PROGRAM_RATINGS;
   const allowed = new Set([...Object.keys(ratings), ...(kind === "self" ? Object.keys(SELF_TEXTS) : [])]);
   if (Object.keys(source).some((key) => !allowed.has(key))) throw new EvaluationInputError("O formulário contém campos desconhecidos.");

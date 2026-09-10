@@ -4,6 +4,8 @@ import { useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ClipboardCheck, Loader2, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CourseEvaluationFields } from "./CourseEvaluationFields";
+import { COURSE_FIELDS, isCourseEvaluation, safeEvaluationError, validateAnswers } from "@/lib/evaluations/rules";
 import {
   AnswersSummary,
   EvaluationReview,
@@ -44,7 +46,10 @@ export type SelfEvaluationFormProps = {
 
 export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted = false, onSave }: SelfEvaluationFormProps) {
   const router = useRouter();
-  const [answers, setAnswers] = useState<Record<string, number | string | null>>(initialAnswers);
+  // Keep a pre-existing legacy draft editable without relabelling or dropping its answers.
+  const legacy = Object.keys(initialAnswers).length > 0 && !isCourseEvaluation(initialAnswers);
+  const questions = legacy ? [...ratingQuestions, ...textQuestions] : Object.entries(COURSE_FIELDS).map(([key, label]) => ({ key, label }));
+  const [answers, setAnswers] = useState<Record<string, number | string | null>>(() => Object.keys(initialAnswers).length ? initialAnswers : { course_review: "" });
   const [reviewing, setReviewing] = useState(false);
   const [sent, setSent] = useState(false);
   const [feedback, setFeedback] = useState<EvaluationFeedback>(null);
@@ -70,10 +75,14 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
           setFeedback({ kind: "error", text: result.error || "Não foi possível confirmar a gravação. Suas respostas continuam nesta tela; tente novamente." });
           return;
         }
-        setFeedback({ kind: "success", text: result.message || (submit ? "Autoavaliação enviada e registrada." : "Rascunho salvo. Você pode continuar depois.") });
+        setFeedback({ kind: "success", text: result.message || (submit ? "Avaliação enviada e registrada." : "Rascunho salvo. Você pode continuar depois.") });
         if (submit) {
           setSent(true);
           setReviewing(false);
+          if (!legacy) {
+            router.push("/avaliacoes/sugestoes?etapa=melhoria");
+            return;
+          }
         }
         router.refresh();
       } catch {
@@ -87,6 +96,16 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current) return;
+    if (!legacy) {
+      try { validateAnswers("self", answers, true); }
+      catch (error) {
+        setFeedback({ kind: "error", text: safeEvaluationError(error) });
+        event.currentTarget.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+        return;
+      }
+      save(true);
+      return;
+    }
     setFeedback(null);
     setReviewing(true);
   }
@@ -100,11 +119,11 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
   if (isSubmitted) {
     return (
       <div className="space-y-5">
-        <EvaluationStatus feedback={feedback || { kind: "success", text: "Autoavaliação registrada. Você pode consultar suas respostas abaixo." }} />
+        <EvaluationStatus feedback={feedback || { kind: "success", text: "Avaliação registrada. Você pode consultar suas respostas abaixo." }} />
         <section className={evaluationPanelClass}>
           <h3 className="flex items-center gap-2 text-lg font-semibold text-ink"><CheckCircle2 size={21} className="text-folha" aria-hidden="true" />Suas respostas</h3>
           <p className="mb-5 mt-2 text-sm leading-6 text-stone-600">Este registro está vinculado à sua conta e disponível para você e os responsáveis autorizados. Para uma correção, procure a coordenação.</p>
-          <AnswersSummary questions={[...ratingQuestions, ...textQuestions]} answers={answers} />
+          <AnswersSummary questions={questions} answers={answers} />
         </section>
       </div>
     );
@@ -112,14 +131,15 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
 
   return (
     <div className="space-y-5" aria-busy={pending}>
+      {!legacy && <p className="text-sm font-semibold text-folha">Etapa 1 de 2 · Avaliação do curso</p>}
       <aside className="flex gap-3 rounded-xl border border-stone-200 bg-[#f7f7f2] p-4 text-sm leading-6 text-stone-700">
         <ClipboardCheck size={21} className="mt-0.5 shrink-0 text-folha" aria-hidden="true" />
-        <p><strong className="text-ink">Sua evolução fica registrada.</strong> Esta autoavaliação é identificada e pode ser consultada por você e pelos responsáveis autorizados. Ela ajuda a orientar seu aprendizado e o apoio pedagógico.</p>
+        <p>{legacy ? "Este rascunho mantém as perguntas do formulário anterior. " : "Sua opinião ajuda a melhorar o curso. "}Esta avaliação fica vinculada à sua conta e pode ser consultada por você e pelos responsáveis autorizados.</p>
       </aside>
 
       {reviewing ? (
         <EvaluationReview title="Revise sua autoavaliação">
-          <AnswersSummary questions={[...ratingQuestions, ...textQuestions]} answers={answers} />
+          <AnswersSummary questions={questions} answers={answers} />
           <p className="rounded-lg bg-[#f7f7f2] p-3 text-sm leading-6 text-stone-600">Ao confirmar, suas respostas serão registradas como avaliação final. Depois do envio, correções precisam ser solicitadas à coordenação.</p>
           <EvaluationStatus feedback={feedback} />
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
@@ -129,7 +149,9 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
         </EvaluationReview>
       ) : (
         <form onSubmit={review} className="space-y-5">
-          <section className={evaluationPanelClass}>
+          {!legacy ? <section className={evaluationPanelClass}>
+            <CourseEvaluationFields answers={answers} onChange={updateAnswer} disabled={pending} />
+          </section> : <><section className={evaluationPanelClass}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <h3 ref={editHeading} tabIndex={-1} className="text-lg font-semibold text-ink outline-none">Como está seu aprendizado?</h3>
               <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-600">{answeredCount} de 5 respondidas</span>
@@ -145,10 +167,12 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
             <PrivacyReminder />
             {textQuestions.map((question) => <EvaluationTextField key={question.key} name={question.key} label={question.label} value={typeof answers[question.key] === "string" ? answers[question.key] as string : ""} onChange={(value) => updateAnswer(question.key, value)} />)}
           </fieldset>
+          </>}
           <EvaluationStatus feedback={feedback} />
+          {!legacy && <p className="text-sm leading-6 text-stone-600">Ao avançar, sua avaliação será registrada. Na próxima etapa, você poderá deixar uma sugestão ou crítica anônima, guardada separadamente.</p>}
           <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="outline" onClick={() => save(false)} disabled={pending} className="h-11">{pending ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <Save size={17} aria-hidden="true" />}Salvar rascunho</Button>
-            <Button type="submit" disabled={pending} className={evaluationPrimaryClass}><ClipboardCheck size={18} aria-hidden="true" />Revisar e enviar</Button>
+            <Button type="submit" disabled={pending} className={evaluationPrimaryClass}>{pending ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}{pending ? "Salvando..." : legacy ? "Revisar e enviar" : "Avançar"}</Button>
           </div>
         </form>
       )}

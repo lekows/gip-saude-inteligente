@@ -28,6 +28,38 @@ const programAnswers = {
   satisfaction: null,
 };
 
+test("avaliação do curso exige uma classificação e comentário de pelo menos vinte caracteres", () => {
+  for (const rating of [1, 2, 3, 4, 5]) {
+    assert.deepEqual(validateAnswers("self", { course_rating: rating, course_review: "x".repeat(20) }, true), { course_rating: rating, course_review: "x".repeat(20) });
+  }
+  const input = { course_rating: 4, course_review: "  Gostei muito deste curso  " };
+  assert.deepEqual(validateAnswers("self", input, true), { course_rating: 4, course_review: "Gostei muito deste curso" });
+  assert.equal(input.course_review, "  Gostei muito deste curso  ");
+  for (const review of [undefined, null, "", "x".repeat(19), " ".repeat(30), " \n\tcurto\t\n "]) {
+    assert.throws(() => validateAnswers("self", { course_rating: 4, course_review: review }, true), /pelo menos 20/);
+  }
+  assert.deepEqual(validateAnswers("self", { course_rating: 4 }, false), { course_rating: 4, course_review: "" });
+});
+
+test("rascunho do curso aceita comentário sem estrelas, mas envio exige classificação", () => {
+  const draft = { course_review: "Ainda estou avaliando" };
+  assert.deepEqual(validateAnswers("self", draft, false), draft);
+  assert.throws(() => validateAnswers("self", draft, true), /1 a 5 estrelas/);
+  for (const invalid of [0, 6, -1, 1.5, NaN, Infinity, "5", null, undefined, true, [], {}]) {
+    assert.throws(() => validateAnswers("self", { course_rating: invalid }, true), /1 a 5 estrelas/);
+  }
+});
+
+test("curso rejeita campos antigos misturados e respeita o limite do comentário", () => {
+  assert.throws(() => validateAnswers("self", { course_rating: 4, comprehension: 4 }, true), /desconhecidos/);
+  assert.throws(() => validateAnswers("program", { course_rating: 4 }, true), /desconhecidos/);
+  assert.throws(() => validateAnswers("self", { course_rating: 4, profile_id: "outro-aluno" }, true), /desconhecidos/);
+  assert.equal(validateAnswers("self", { course_review: "x".repeat(1500) }, false).course_review.length, 1500);
+  for (const review of ["x".repeat(1501), 5, false, [], {}]) {
+    assert.throws(() => validateAnswers("self", { course_review: review }, false), /1.500/);
+  }
+});
+
 test("autoavaliação aceita a escala inteira e normaliza textos sem alterar a entrada", () => {
   const input = { ...selfAnswers, learning: "  Trabalho em equipe  " };
   assert.deepEqual(validateAnswers("self", input, true), {
