@@ -1,5 +1,7 @@
 export type EvaluationKind = "self" | "program";
 export type EvaluationAnswers = Record<string, number | string | null>;
+// New course form. Missing rating is allowed only in a private draft.
+export type CourseEvaluationAnswers = { course_rating?: number; course_review: string };
 export type EvaluationCampaign = {
   id: string; cycle_id: string; class_id: string | null; title: string;
   kind: EvaluationKind; stage: "initial" | "module" | "final";

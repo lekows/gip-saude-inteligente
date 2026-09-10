@@ -13,12 +13,12 @@ export default async function EvaluationsPage() {
   return <EvaluationLayout title="Avaliações e sugestões" description="Acompanhe seu aprendizado e participe da melhoria do GIP. Cada formulário informa quem pode acessar suas respostas." back="/meu-gip" backLabel="Meu GIP">
     {canReviewEvaluations(data.profile.role) && <Link className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white" href="/gestao-avaliacoes">Gerenciar avaliações e devolutivas <ArrowRight size={16} /></Link>}
     <section className="grid gap-4 sm:grid-cols-3" aria-label="Meu acompanhamento">
-      {[{ label: "Avaliações disponíveis", value: pending.length }, { label: "Autoavaliações enviadas", value: sent.length }, { label: "Devolutivas recebidas", value: data.feedback.length }].map((item) => <div className="rounded-lg border border-stone-200 bg-white p-5" key={item.label}><p className="text-sm text-stone-600">{item.label}</p><p className="mt-2 text-3xl font-semibold text-folha">{item.value}</p></div>)}
+      {[{ label: "Avaliações disponíveis", value: pending.length }, { label: "Avaliações enviadas", value: sent.length }, { label: "Devolutivas recebidas", value: data.feedback.length }].map((item) => <div className="rounded-lg border border-stone-200 bg-white p-5" key={item.label}><p className="text-sm text-stone-600">{item.label}</p><p className="mt-2 text-3xl font-semibold text-folha">{item.value}</p></div>)}
     </section>
     {!data.hasMembership && <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6">Seu histórico continua disponível. Para responder a novas avaliações e enviar sugestões, é necessário um vínculo ativo com uma turma. A coordenação pode conferir seu cadastro.</p>}
     <section aria-labelledby="self-title">
-      <h2 id="self-title" className="text-xl font-semibold">Minhas autoavaliações</h2>
-      <p className="mt-2 text-sm leading-6 text-stone-600">Respostas identificadas, acessíveis a você e aos responsáveis autorizados. Os rascunhos são privados. Use as avaliações para refletir sobre o aprendizado; elas não geram nota ou carga horária.</p>
+      <h2 id="self-title" className="text-xl font-semibold">Minhas avaliações de curso</h2>
+      <p className="mt-2 text-sm leading-6 text-stone-600">Classifique o curso com 1 a 5 estrelas e, se quiser, escreva sua opinião. As respostas ficam disponíveis para você e os responsáveis autorizados. Rascunhos são privados.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {self.map((campaign) => {
           const response = data.responses.find((item) => item.campaign_id === campaign.id);
@@ -26,7 +26,7 @@ export default async function EvaluationsPage() {
           const label = response?.status === "submitted" ? "Enviada" : response ? "Rascunho" : open ? "Pendente" : "Fora do período";
           return <article className="rounded-lg border border-stone-200 bg-white p-5" key={campaign.id}>
             <div className="flex items-start justify-between gap-4"><h3 className="font-semibold">{campaign.title}</h3><span className="shrink-0 rounded bg-stone-100 px-2 py-1 text-xs">{label}</span></div>
-            <p className="mt-2 text-xs text-stone-500">{evaluationDate(campaign.opens_at)} a {evaluationDate(campaign.closes_at)} · formulário v{campaign.version}</p>
+            <p className="mt-2 text-xs text-stone-500">{evaluationDate(campaign.opens_at)} a {evaluationDate(campaign.closes_at)}</p>
             <Link className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-folha hover:underline" href={`/avaliacoes/${campaign.id}`}>{response?.status === "submitted" ? "Ver respostas e devolutivas" : open ? "Abrir avaliação" : "Consultar avaliação"}<ArrowRight size={16} /></Link>
           </article>;
         })}
