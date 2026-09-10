@@ -12,20 +12,22 @@
     "test:behavioral": "node --experimental-strip-types --test tests/authSecurityBehavioral.test.mjs",
     "test:data-sources": "node --test tests/officialDataSources.test.mjs",
     "test:territorial-evidence": "node --experimental-strip-types --test tests/territorialCoveragePriority.test.mjs tests/territorialVulnerability.test.mjs",
-    "test": "npm run test:domain && npm run test:security && npm run test:behavioral && npm run test:data-sources && npm run test:territorial-evidence"
+    "test": "npm run test:domain && npm run test:security && npm run test:behavioral && npm run test:data-sources && npm run test:territorial-evidence && npm run test:evaluations",
+    "test:evaluations": "node --experimental-strip-types --test tests/evaluationRules.test.mjs tests/evaluationsDatabase.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.49.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
-    "next": "15.5.21",
+    "next": "15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@types/leaflet": "^1.9.16",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
@@ -37,6 +39,6 @@
   },
   "overrides": {
     "postcss": "8.5.24",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   }
 }

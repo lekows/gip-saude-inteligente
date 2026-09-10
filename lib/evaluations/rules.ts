@@ -83,3 +83,7 @@ export function evaluationDateBoundary(value: unknown, end: boolean) {
   if (!Number.isFinite(utc.getTime()) || utc.toISOString().slice(0, 10) !== value) throw new EvaluationInputError("Informe uma data válida.");
   return `${value}T${end ? "23:59:59" : "00:00:00"}-03:00`;
 }
+
+export function evaluationLocalDate(value: string) {
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo" }).format(new Date(value));
+}
