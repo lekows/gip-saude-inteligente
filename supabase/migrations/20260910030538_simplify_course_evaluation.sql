@@ -42,4 +42,3 @@ begin
   return true;
 end;
 $$;
-
