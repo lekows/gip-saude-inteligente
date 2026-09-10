@@ -28,13 +28,17 @@ const programAnswers = {
   satisfaction: null,
 };
 
-test("avaliação do curso aceita uma classificação e um comentário opcional", () => {
+test("avaliação do curso exige uma classificação e comentário de pelo menos vinte caracteres", () => {
   for (const rating of [1, 2, 3, 4, 5]) {
-    assert.deepEqual(validateAnswers("self", { course_rating: rating }, true), { course_rating: rating, course_review: "" });
+    assert.deepEqual(validateAnswers("self", { course_rating: rating, course_review: "x".repeat(20) }, true), { course_rating: rating, course_review: "x".repeat(20) });
   }
-  const input = { course_rating: 4, course_review: "  Curso muito bom  " };
-  assert.deepEqual(validateAnswers("self", input, true), { course_rating: 4, course_review: "Curso muito bom" });
-  assert.equal(input.course_review, "  Curso muito bom  ");
+  const input = { course_rating: 4, course_review: "  Gostei muito deste curso  " };
+  assert.deepEqual(validateAnswers("self", input, true), { course_rating: 4, course_review: "Gostei muito deste curso" });
+  assert.equal(input.course_review, "  Gostei muito deste curso  ");
+  for (const review of [undefined, null, "", "x".repeat(19), " ".repeat(30), " \n\tcurto\t\n "]) {
+    assert.throws(() => validateAnswers("self", { course_rating: 4, course_review: review }, true), /pelo menos 20/);
+  }
+  assert.deepEqual(validateAnswers("self", { course_rating: 4 }, false), { course_rating: 4, course_review: "" });
 });
 
 test("rascunho do curso aceita comentário sem estrelas, mas envio exige classificação", () => {

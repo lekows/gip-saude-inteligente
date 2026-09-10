@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ClipboardCheck, Loader2, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CourseEvaluationFields } from "./CourseEvaluationFields";
-import { COURSE_FIELDS, isCourseEvaluation } from "@/lib/evaluations/rules";
+import { COURSE_FIELDS, isCourseEvaluation, safeEvaluationError, validateAnswers } from "@/lib/evaluations/rules";
 import {
   AnswersSummary,
   EvaluationReview,
@@ -79,6 +79,10 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
         if (submit) {
           setSent(true);
           setReviewing(false);
+          if (!legacy) {
+            router.push("/avaliacoes/sugestoes?etapa=melhoria");
+            return;
+          }
         }
         router.refresh();
       } catch {
@@ -92,7 +96,16 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current) return;
-    if (!legacy) { save(true); return; }
+    if (!legacy) {
+      try { validateAnswers("self", answers, true); }
+      catch (error) {
+        setFeedback({ kind: "error", text: safeEvaluationError(error) });
+        event.currentTarget.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+        return;
+      }
+      save(true);
+      return;
+    }
     setFeedback(null);
     setReviewing(true);
   }
@@ -118,6 +131,7 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
 
   return (
     <div className="space-y-5" aria-busy={pending}>
+      {!legacy && <p className="text-sm font-semibold text-folha">Etapa 1 de 2 · Avaliação do curso</p>}
       <aside className="flex gap-3 rounded-xl border border-stone-200 bg-[#f7f7f2] p-4 text-sm leading-6 text-stone-700">
         <ClipboardCheck size={21} className="mt-0.5 shrink-0 text-folha" aria-hidden="true" />
         <p>{legacy ? "Este rascunho mantém as perguntas do formulário anterior. " : "Sua opinião ajuda a melhorar o curso. "}Esta avaliação fica vinculada à sua conta e pode ser consultada por você e pelos responsáveis autorizados.</p>
@@ -155,9 +169,10 @@ export function SelfEvaluationForm({ campaignId, initialAnswers = {}, submitted 
           </fieldset>
           </>}
           <EvaluationStatus feedback={feedback} />
+          {!legacy && <p className="text-sm leading-6 text-stone-600">Ao avançar, sua avaliação será registrada. Na próxima etapa, você poderá deixar uma sugestão ou crítica anônima, guardada separadamente.</p>}
           <div className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="outline" onClick={() => save(false)} disabled={pending} className="h-11">{pending ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <Save size={17} aria-hidden="true" />}Salvar rascunho</Button>
-            <Button type="submit" disabled={pending} className={evaluationPrimaryClass}>{pending ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}{pending ? "Enviando..." : legacy ? "Revisar e enviar" : "Enviar avaliação"}</Button>
+            <Button type="submit" disabled={pending} className={evaluationPrimaryClass}>{pending ? <Loader2 size={18} className="animate-spin" aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}{pending ? "Salvando..." : legacy ? "Revisar e enviar" : "Avançar"}</Button>
           </div>
         </form>
       )}

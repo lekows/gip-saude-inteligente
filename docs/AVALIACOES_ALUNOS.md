@@ -4,16 +4,21 @@ Implementação de 9 de setembro de 2026. O módulo integra o Meu GIP e a gestã
 
 ## Operação
 - /avaliacoes: avaliações disponíveis, histórico, devolutivas, avaliação anônima do programa e mural.
-- /avaliacoes/[id]: avaliação do curso com cinco estrelas e um comentário opcional; rascunho privado e envio confirmado após gravação.
+- /avaliacoes/[id]: avaliação do curso com cinco estrelas e comentário obrigatório; Avançar salva a avaliação antes da etapa anônima.
 - /avaliacoes/sugestoes: categoria, manifestação e proposta opcional.
 - /gestao-avaliacoes: criação por ciclo/turma, caixa restrita, encaminhamentos e sínteses revisadas.
 - /gestao-avaliacoes/[id]: pendências identificadas, respostas enviadas, devolutivas e resultados agrupados.
 
 A coordenação configura título, tipo, etapa (inicial/módulo/final) e datas em Brasília. Módulo exige capacitação selecionada.
 
-Em 10/09/2026, a avaliação identificada do curso (`self`) passa a usar `course_rating` (inteiro obrigatório de 1 a 5, apresentado em estrelas) e `course_review` (comentário opcional de até 1.500 caracteres). O aluno escolhe as estrelas, escreve se desejar e clica em **Enviar avaliação**, sem etapa extra de revisão. Um rascunho pode ser salvo sem estrelas. O texto não é publicado no mural.
+Em 10/09/2026, a avaliação identificada do curso (`self`) passa a usar `course_rating` (inteiro obrigatório de 1 a 5, apresentado em estrelas) e `course_review` (comentário obrigatório de 20 a 1.500 caracteres, sem espaços nas extremidades). O aluno escolhe as estrelas, escreve sua avaliação e clica em **Avançar**. A gravação precisa ser confirmada antes de abrir a etapa de sugestão anônima. Um rascunho pode ser salvo sem estrelas ou com comentário incompleto. O texto não é publicado no mural.
 
 O banco aceita esse formato como alternativa ao instrumento anterior, sem converter notas de aprendizagem em satisfação ou reescrever registros. Respostas e versões antigas preservam suas perguntas; rascunhos antigos continuam editáveis no formulário anterior. Campanhas existentes usam o formulário simples para novas respostas. A avaliação anônima do programa mantém suas seis dimensões e suas regras de agregação. Nenhum score de saúde foi alterado. Mudanças exigem atualizar tipos, banco e testes.
+
+
+A segunda etapa usa `/avaliacoes/sugestoes?etapa=melhoria`: uma caixa para sugestão ou crítica, sem enviar campanha, resposta, matrícula ou perfil. O parâmetro da página é genérico e não identifica o aluno ou curso. O aluno pode concluir sem sugestão; se escrever, o texto exige 10 a 3.000 caracteres. O envio usa a caixa anônima existente, categoria `aulas`, proposta vazia e nonce aleatório independente da avaliação identificada. Não registra no histórico se a pessoa enviou ou pulou a etapa. Um link genérico no histórico permite retomar essa etapa se a navegação for interrompida.
+
+A mensagem acolhe críticas como parte da primeira avaliação e explica que o nome não acompanha a sugestão. Ela não promete impossibilidade de rastreamento: detalhes identificáveis no próprio texto e registros técnicos da infraestrutura limitam o anonimato. Depois de iniciar o envio, o texto e o nonce são mantidos iguais nas tentativas seguintes para evitar duplicidade em caso de resposta de rede incerta. Não há rascunho anônimo salvo no cadastro ou no armazenamento local do navegador.
 
 ## Permissões e registros
 Conta aprovada e ativa é obrigatória. Enviar exige papel acadêmico, vínculo ativo em ciclo não cancelado e matrícula não cancelada quando há capacitação. O histórico próprio permanece disponível após perda do vínculo, enquanto a conta estiver aprovada e ativa.
@@ -50,11 +55,11 @@ Não coletar dados identificáveis de pacientes. Não há e-mail, automação ou
 
 ### Simplificação do curso — 10/09/2026
 
-`npm test` passou com 64 testes, incluindo replay das 11 migrações em PostgreSQL temporário, classificação obrigatória, comentário opcional, preservação exata das respostas, repetição de envio sem duplicidade e RLS. `npm run build` concluiu localmente e `npm audit` não encontrou vulnerabilidades.
+`npm test` passou com 64 testes, incluindo replay das 12 migrações em PostgreSQL temporário, classificação e comentário obrigatórios, preservação exata das respostas, repetição de envio sem duplicidade e RLS. `npm run build` concluiu localmente e `npm audit` não encontrou vulnerabilidades.
 
-O componente real foi exercitado no navegador em uma página temporária de demonstração local, com gravação simulada: cinco radios, uma caixa de texto, bloqueio do envio sem estrelas, seleção pelo teclado, rascunho sem nota, manutenção das respostas após erro e confirmação com resumo. A página temporária foi removida antes do commit; nenhum envio de aluno foi criado em produção. Essa verificação visual não equivale a um teste de login de aluno na implantação final.
+Os componentes reais foram exercitados no navegador em uma página temporária de demonstração local, com gravação simulada: cinco radios, comentário obrigatório, bloqueio de comentário vazio ou insuficiente após remover espaços, manutenção das respostas após erro e navegação após confirmação. A página protegida mantém a exigência de login. A segunda etapa foi testada separadamente: texto sem identificadores no payload, falha com texto preservado, nova tentativa com nonce e conteúdo idênticos e confirmação com limpeza do texto. A primeira revisão também verificou teclado e rascunho sem nota. A página temporária foi removida antes do commit; nenhum envio de aluno foi criado em produção. Essa verificação visual não equivale a um teste de login de aluno na implantação final.
 
-A migração aditiva `20260910030538_simplify_course_evaluation.sql` já foi aplicada no Supabase. A conferência somente de leitura confirmou aceitação do novo formato e rejeição de classificação ausente ou nula. Advisors de segurança foram executados novamente: permanecem somente os avisos anteriores descritos abaixo. O código da interface depende da revisão e integração do PR antes de entrar em produção.
+As migrações `20260910030538_simplify_course_evaluation.sql` e `20260910032118_require_course_review.sql` já foram aplicadas no Supabase. A segunda exige o comentário mínimo no envio final, mantendo rascunhos e respostas antigas. Não havia respostas nem rascunhos no novo formato antes da alteração. A conferência somente de leitura confirmou aceitação do novo formato e rejeição de classificação ausente ou nula. Advisors de segurança foram executados novamente: permanecem somente os avisos anteriores descritos abaixo. O código da interface depende da revisão e integração do PR antes de entrar em produção.
 
 ### Registro da implantação inicial — PR #12
 npm test inclui testes de regras reais e replay de todas as migrações em PostgreSQL temporário (PGlite), com fixtures sintéticas e rollback. Simula apenas serviços básicos auth/storage; as políticas e funções da aplicação são reais. Testa autorização, RLS, matrícula, prazos, versões, devolutivas, privacidade, agregação, nonce e limite de envios.

@@ -18,7 +18,7 @@ export default async function EvaluationsPage() {
     {!data.hasMembership && <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6">Seu histórico continua disponível. Para responder a novas avaliações e enviar sugestões, é necessário um vínculo ativo com uma turma. A coordenação pode conferir seu cadastro.</p>}
     <section aria-labelledby="self-title">
       <h2 id="self-title" className="text-xl font-semibold">Minhas avaliações de curso</h2>
-      <p className="mt-2 text-sm leading-6 text-stone-600">Classifique o curso com 1 a 5 estrelas e, se quiser, escreva sua opinião. As respostas ficam disponíveis para você e os responsáveis autorizados. Rascunhos são privados.</p>
+      <p className="mt-2 text-sm leading-6 text-stone-600">Classifique o curso com 1 a 5 estrelas e escreva sua opinião com pelo menos 20 caracteres. As respostas ficam disponíveis para você e os responsáveis autorizados. Rascunhos são privados.</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {self.map((campaign) => {
           const response = data.responses.find((item) => item.campaign_id === campaign.id);

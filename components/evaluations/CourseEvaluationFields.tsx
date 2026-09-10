@@ -4,6 +4,7 @@ import { useId } from "react";
 import { Star } from "lucide-react";
 import { EvaluationTextField } from "./EvaluationFields";
 import type { EvaluationAnswers } from "@/types/evaluations";
+import { COURSE_REVIEW_MIN_LENGTH } from "@/lib/evaluations/rules";
 
 export function CourseEvaluationFields({ answers, onChange, disabled = false }: {
   answers: EvaluationAnswers;
@@ -36,9 +37,10 @@ export function CourseEvaluationFields({ answers, onChange, disabled = false }: 
     </fieldset>
     <EvaluationTextField
       name="course_review" label="O que você achou do curso?"
+      required minLength={COURSE_REVIEW_MIN_LENGTH}
       value={typeof answers.course_review === "string" ? answers.course_review : ""}
       onChange={(value) => onChange("course_review", value)}
-      hint="Conte o que foi bom e o que pode melhorar. Não inclua dados pessoais de outras pessoas."
+      hint={`Escreva pelo menos ${COURSE_REVIEW_MIN_LENGTH} caracteres. Conte como foi sua experiência, sem incluir dados pessoais de outras pessoas.`}
     />
   </fieldset>;
 }

@@ -1,6 +1,7 @@
 import type { CourseEvaluationAnswers, EvaluationAnswers, EvaluationCampaign, EvaluationKind } from "../../types/evaluations.ts";
 
 export class EvaluationInputError extends Error {}
+export const COURSE_REVIEW_MIN_LENGTH = 20;
 
 export const COURSE_FIELDS = {
   course_rating: "Classificação do curso",
@@ -48,6 +49,7 @@ export function validateAnswers(kind: EvaluationKind, value: unknown, submit: bo
     const review = source.course_review ?? "";
     if (typeof review !== "string" || review.length > 1500) throw new EvaluationInputError("A avaliação pode ter até 1.500 caracteres.");
     result.course_review = review.trim();
+    if (submit && result.course_review.length < COURSE_REVIEW_MIN_LENGTH) throw new EvaluationInputError(`Escreva pelo menos ${COURSE_REVIEW_MIN_LENGTH} caracteres sobre o curso, sem contar espaços no início e no fim.`);
     return result;
   }
   const ratings = kind === "self" ? SELF_RATINGS : PROGRAM_RATINGS;
