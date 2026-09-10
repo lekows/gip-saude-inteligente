@@ -59,6 +59,7 @@ export default async function AcademicManagementPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link href="/gestao-avaliacoes" className="inline-flex h-10 items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-folha">Avaliações e sugestões</Link>
             {data.cycle ? <AcademicSetupButton configured /> : null}
             {profile.role === "administrador" ? (
               <Link

@@ -84,6 +84,14 @@ export async function middleware(request: NextRequest) {
   }
 
   if (
+    path.startsWith("/gestao-avaliacoes") &&
+    !["administrador", "professor_coordenador", "professor_colaborador"].includes(profile.role)
+  ) {
+    url.pathname = "/avaliacoes";
+    return createRedirectWithCookies(request, url, supabaseResponse);
+  }
+
+  if (
     path.startsWith("/gestao-academica") &&
     profile.role !== "administrador" &&
     profile.role !== "professor_coordenador"
