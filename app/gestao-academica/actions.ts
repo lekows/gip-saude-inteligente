@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { getCreditedTrainingHours } from "@/lib/academic/academicRules";
+import { calculateTrainingHours, getCreditedTrainingHours } from "@/lib/academic/academicRules";
 import type { AcademicAttendanceStatus } from "@/types/academic";
 
 type AcademicActionResult = {
@@ -22,7 +22,7 @@ const pilotTrainings = [
     area: "Integração",
     startsAt: "2026-08-12T18:30:00-03:00",
     endsAt: "2026-08-12T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 4,
   },
   {
     title: "Capacitação 1 - Da pergunta clínica à ação territorial",
@@ -30,7 +30,7 @@ const pilotTrainings = [
     area: "Clínica e tecnologia",
     startsAt: "2026-08-19T18:30:00-03:00",
     endsAt: "2026-08-19T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 4,
   },
   {
     title: "Capacitação 2 - Inteligência artificial e dados em saúde",
@@ -38,7 +38,7 @@ const pilotTrainings = [
     area: "IA e dados",
     startsAt: "2026-08-26T18:30:00-03:00",
     endsAt: "2026-08-26T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 4,
   },
   {
     title: "Capacitação 3 - Gestão, 5W2H e instrumentos de coleta",
@@ -46,7 +46,7 @@ const pilotTrainings = [
     area: "Gestão e coleta",
     startsAt: "2026-09-02T18:30:00-03:00",
     endsAt: "2026-09-02T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 4,
   },
   {
     title: "Capacitação 4 - Inteligência territorial e ação comunitária",
@@ -54,7 +54,7 @@ const pilotTrainings = [
     area: "Território e comunidade",
     startsAt: "2026-09-09T18:30:00-03:00",
     endsAt: "2026-09-09T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 4,
   },
 ] as const;
 
@@ -188,10 +188,23 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
       })),
     );
     if (enrollments.length) {
-      const { error } = await supabase
+      const { data: existingEnrollments, error: lookupError } = await supabase
         .from("training_enrollments")
-        .upsert(enrollments, { onConflict: "class_id,member_id" });
-      if (error) throw error;
+        .select("class_id, member_id")
+        .in("class_id", (classes ?? []).map((trainingClass) => trainingClass.id));
+      if (lookupError) throw lookupError;
+      const existingKeys = new Set(
+        (existingEnrollments ?? []).map((item) => `${item.class_id}:${item.member_id}`),
+      );
+      const missingEnrollments = enrollments.filter(
+        (item) => !existingKeys.has(`${item.class_id}:${item.member_id}`),
+      );
+      if (missingEnrollments.length) {
+        const { error } = await supabase
+          .from("training_enrollments")
+          .insert(missingEnrollments);
+        if (error) throw error;
+      }
     }
 
     const { error: auditError } = await supabase.from("audit_logs").insert({
@@ -240,17 +253,10 @@ export async function saveClassAttendance(
 
     const { data: trainingClass, error: classError } = await supabase
       .from("training_classes")
-      .select("id, module_id, starts_at, ends_at")
+      .select("id, starts_at, ends_at")
       .eq("id", classId)
       .single();
     if (classError) throw classError;
-
-    const { data: trainingModule, error: moduleError } = await supabase
-      .from("training_modules")
-      .select("workload_hours")
-      .eq("id", trainingClass.module_id)
-      .single();
-    if (moduleError) throw moduleError;
 
     const { data: validEnrollments, error: enrollmentError } = await supabase
       .from("training_enrollments")
@@ -283,7 +289,7 @@ export async function saveClassAttendance(
           status: "concluido",
           completed_workload_hours: getCreditedTrainingHours(
             record.status,
-            Number(trainingModule.workload_hours),
+            calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
           ),
           completed_at: now,
         })

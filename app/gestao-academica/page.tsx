@@ -150,7 +150,7 @@ export default async function AcademicManagementPage() {
                             {student.attendancePercent === null ? "--" : `${student.attendancePercent}%`}
                           </span>
                           <p className="text-xs text-stone-500">
-                            {student.attendedClasses}/{student.enrolledClasses} encontros
+                            {student.attendedClasses}/{student.recordedClasses} chamadas registradas
                           </p>
                         </TableCell>
                         <TableCell>

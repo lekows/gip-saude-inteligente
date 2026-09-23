@@ -28,3 +28,7 @@ Thumbs.db
 
 # generated archives
 *.zip
+
+# private attendance reports and working data
+/output/
+/tmp/pdfs/
