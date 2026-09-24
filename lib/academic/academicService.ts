@@ -192,7 +192,9 @@ export async function getAcademicDashboardData(
       endsAt: trainingClass.ends_at,
       location: trainingClass.location,
       status: trainingClass.status,
-      workloadHours: calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
+      workloadHours: module
+        ? toNumber(module.workload_hours)
+        : calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
       enrolledStudents: classEnrollments.length,
       presentStudents,
       attendancePercent: recordedStudents
@@ -305,7 +307,7 @@ export async function getAttendanceRoster(
       endsAt: trainingClass.ends_at,
       location: trainingClass.location,
       status: trainingClass.status,
-      workloadHours: calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
+      workloadHours: toNumber(moduleData.workload_hours),
       enrolledStudents: entries.length,
       presentStudents,
       attendancePercent: attendance.length

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { calculateTrainingHours, getCreditedTrainingHours } from "@/lib/academic/academicRules";
+import { getCreditedTrainingHours } from "@/lib/academic/academicRules";
 import type { AcademicAttendanceStatus } from "@/types/academic";
 
 type AcademicActionResult = {
@@ -22,7 +22,7 @@ const pilotTrainings = [
     area: "Integração",
     startsAt: "2026-08-12T18:30:00-03:00",
     endsAt: "2026-08-12T22:30:00-03:00",
-    workloadHours: 4,
+    workloadHours: 10,
   },
   {
     title: "Capacitação 1 - Da pergunta clínica à ação territorial",
@@ -30,7 +30,7 @@ const pilotTrainings = [
     area: "Clínica e tecnologia",
     startsAt: "2026-08-19T18:30:00-03:00",
     endsAt: "2026-08-19T22:30:00-03:00",
-    workloadHours: 4,
+    workloadHours: 10,
   },
   {
     title: "Capacitação 2 - Inteligência artificial e dados em saúde",
@@ -38,15 +38,7 @@ const pilotTrainings = [
     area: "IA e dados",
     startsAt: "2026-08-26T18:30:00-03:00",
     endsAt: "2026-08-26T22:30:00-03:00",
-    workloadHours: 4,
-  },
-  {
-    title: "Capacitação 3 - Gestão, 5W2H e instrumentos de coleta",
-    description: "Planejamento prático, entrevistas e construção de matrizes de trabalho.",
-    area: "Gestão e coleta",
-    startsAt: "2026-09-02T18:30:00-03:00",
-    endsAt: "2026-09-02T22:30:00-03:00",
-    workloadHours: 4,
+    workloadHours: 10,
   },
   {
     title: "Capacitação 4 - Inteligência territorial e ação comunitária",
@@ -54,7 +46,7 @@ const pilotTrainings = [
     area: "Território e comunidade",
     startsAt: "2026-09-09T18:30:00-03:00",
     endsAt: "2026-09-09T22:30:00-03:00",
-    workloadHours: 4,
+    workloadHours: 10,
   },
 ] as const;
 
@@ -157,18 +149,26 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
     if (profileError) throw profileError;
 
     if (academicProfiles?.length) {
-      const { error: memberError } = await supabase.from("program_members").upsert(
-        academicProfiles.map((profile) => ({
+      const { data: existingMembers, error: membersLookupError } = await supabase
+        .from("program_members")
+        .select("profile_id")
+        .eq("cycle_id", cycleId);
+      if (membersLookupError) throw membersLookupError;
+      const linkedProfiles = new Set((existingMembers ?? []).map((member) => member.profile_id));
+      const missingMembers = academicProfiles
+        .filter((profile) => !linkedProfiles.has(profile.id))
+        .map((profile) => ({
           cycle_id: cycleId,
           profile_id: profile.id,
           member_role: profile.role,
           status: "ativo",
           joined_at: "2026-08-12",
           target_workload_hours: 86,
-        })),
-        { onConflict: "cycle_id,profile_id" },
-      );
-      if (memberError) throw memberError;
+        }));
+      if (missingMembers.length) {
+        const { error: memberError } = await supabase.from("program_members").insert(missingMembers);
+        if (memberError) throw memberError;
+      }
     }
 
     const [{ data: members, error: membersError }, { data: classes, error: classesError }] =
@@ -223,7 +223,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
     revalidatePath("/meu-gip");
     return {
       success: true,
-      message: `Turma piloto configurada com um encontro de integração, quatro capacitações e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
+      message: `Turma piloto configurada com quatro treinamentos e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
     };
   } catch (error) {
     return {
@@ -253,10 +253,17 @@ export async function saveClassAttendance(
 
     const { data: trainingClass, error: classError } = await supabase
       .from("training_classes")
-      .select("id, starts_at, ends_at")
+      .select("id, module_id, starts_at, ends_at")
       .eq("id", classId)
       .single();
     if (classError) throw classError;
+
+    const { data: trainingModule, error: moduleError } = await supabase
+      .from("training_modules")
+      .select("workload_hours")
+      .eq("id", trainingClass.module_id)
+      .single();
+    if (moduleError) throw moduleError;
 
     const { data: validEnrollments, error: enrollmentError } = await supabase
       .from("training_enrollments")
@@ -289,7 +296,7 @@ export async function saveClassAttendance(
           status: "concluido",
           completed_workload_hours: getCreditedTrainingHours(
             record.status,
-            calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
+            Number(trainingModule.workload_hours),
           ),
           completed_at: now,
         })
@@ -314,6 +321,7 @@ export async function saveClassAttendance(
         present: records.filter((record) => record.status === "presente").length,
         absent: records.filter((record) => record.status === "ausente").length,
         justified: records.filter((record) => record.status === "justificado").length,
+        credit_per_presence_hours: Number(trainingModule.workload_hours),
       },
     });
     if (auditError) throw auditError;

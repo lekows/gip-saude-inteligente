@@ -145,13 +145,13 @@ export default async function CoordinationHoursPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
-            <p className="text-sm text-stone-500">“4 h” indica crédito recebido; “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
+            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line credita 4 h. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
             <Table className="min-w-[1100px]">
               <TableHeader><TableRow>
                 <TableHead className="pl-6">Acadêmico colaborador</TableHead>
-                {matrix.stages.map((stage) => <TableHead key={stage.key} className="min-w-36"><span className="block">{formatStageDate(stage.date)}</span><span className="block max-w-40 text-xs font-normal leading-tight">{stage.title}</span></TableHead>)}
+                {matrix.stages.map((stage) => <TableHead key={stage.key} className="min-w-36"><span className="block">{formatStageDate(stage.date)}</span><span className="block text-xs font-semibold">{stage.label}</span><span className="block max-w-40 text-xs font-normal leading-tight">{stage.title}</span></TableHead>)}
                 <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead className="pr-6">Total</TableHead>
               </TableRow></TableHeader>
               <TableBody>

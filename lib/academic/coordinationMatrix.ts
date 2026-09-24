@@ -28,6 +28,7 @@ export type CoordinationMeetingEntry = {
 export type CoordinationStage = {
   key: string;
   date: string;
+  label: string;
   title: string;
   kind: "training" | "meeting";
 };
@@ -46,12 +47,15 @@ export function buildCoordinationMatrix(
   const meetingStages = new Map<string, CoordinationStage>();
   for (const entry of meetingEntries) {
     const key = `meeting:${entry.date}:${entry.title}`;
-    meetingStages.set(key, { key, date: entry.date, title: entry.title, kind: "meeting" });
+    meetingStages.set(key, {
+      key, date: entry.date, label: "Reunião on-line", title: entry.title, kind: "meeting",
+    });
   }
   const stages: CoordinationStage[] = [
-    ...trainingStages.map((stage) => ({
+    ...[...trainingStages].sort((a, b) => a.date.localeCompare(b.date)).map((stage, index) => ({
       key: `training:${stage.id}`,
       date: stage.date,
+      label: `Treinamento ${index + 1}`,
       title: stage.title,
       kind: "training" as const,
     })),
