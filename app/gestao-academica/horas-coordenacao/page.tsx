@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { buildCoordinationMatrix } from "@/lib/academic/coordinationMatrix";
 
 type HoursRow = {
   id: string;
@@ -47,15 +48,27 @@ export default async function CoordinationHoursPage() {
 
   let rows: HoursRow[] = [];
   const names = new Map<string, string>();
+  let members: { id: string; profile_id: string }[] = [];
+  let classes: { id: string; title: string | null; starts_at: string }[] = [];
+  let enrollments: { id: string; class_id: string; member_id: string; completed_workload_hours: number | string }[] = [];
+  let attendance: { enrollment_id: string; status: "presente" | "ausente" | "justificado" }[] = [];
   if (cycle) {
-    const { data, error } = await supabase
-      .from("coordination_hours")
-      .select("id, profile_id, activity_date, activity_title, preparation_hours, meeting_hours, source_note")
-      .eq("cycle_id", cycle.id)
-      .order("activity_date", { ascending: false });
-    if (error) throw error;
-    rows = (data ?? []) as HoursRow[];
-    const profileIds = [...new Set(rows.map((row) => row.profile_id))];
+    const [ledgerResult, membersResult, classesResult] = await Promise.all([
+      supabase.from("coordination_hours")
+        .select("id, profile_id, activity_date, activity_title, preparation_hours, meeting_hours, source_note")
+        .eq("cycle_id", cycle.id).order("activity_date", { ascending: false }),
+      supabase.from("program_members").select("id, profile_id")
+        .eq("cycle_id", cycle.id).eq("member_role", "academico_colaborador"),
+      supabase.from("training_classes").select("id, title, starts_at")
+        .eq("cycle_id", cycle.id).eq("status", "concluida").order("starts_at"),
+    ]);
+    if (ledgerResult.error) throw ledgerResult.error;
+    if (membersResult.error) throw membersResult.error;
+    if (classesResult.error) throw classesResult.error;
+    rows = (ledgerResult.data ?? []) as HoursRow[];
+    members = membersResult.data ?? [];
+    classes = classesResult.data ?? [];
+    const profileIds = [...new Set([...rows.map((row) => row.profile_id), ...members.map((member) => member.profile_id)])];
     if (profileIds.length) {
       const { data: people, error: peopleError } = await supabase
         .from("profiles")
@@ -64,15 +77,50 @@ export default async function CoordinationHoursPage() {
       if (peopleError) throw peopleError;
       for (const person of people ?? []) names.set(person.id, person.full_name);
     }
+    if (members.length && classes.length) {
+      const { data, error } = await supabase.from("training_enrollments")
+        .select("id, class_id, member_id, completed_workload_hours")
+        .in("member_id", members.map((member) => member.id))
+        .in("class_id", classes.map((trainingClass) => trainingClass.id));
+      if (error) throw error;
+      enrollments = data ?? [];
+      if (enrollments.length) {
+        const attendanceResult = await supabase.from("attendance_records")
+          .select("enrollment_id, status")
+          .in("enrollment_id", enrollments.map((enrollment) => enrollment.id));
+        if (attendanceResult.error) throw attendanceResult.error;
+        attendance = (attendanceResult.data ?? []) as typeof attendance;
+      }
+    }
   }
 
-  const totals = new Map<string, { preparation: number; meeting: number }>();
-  for (const row of rows) {
-    const current = totals.get(row.profile_id) ?? { preparation: 0, meeting: 0 };
-    current.preparation += Number(row.preparation_hours);
-    current.meeting += Number(row.meeting_hours);
-    totals.set(row.profile_id, current);
-  }
+  const attendanceByEnrollment = new Map(attendance.map((record) => [record.enrollment_id, record.status]));
+  const matrix = buildCoordinationMatrix(
+    members.map((member) => ({
+      profileId: member.profile_id,
+      memberId: member.id,
+      fullName: names.get(member.profile_id) ?? "Cadastro não localizado",
+    })),
+    classes.map((trainingClass) => ({
+      id: trainingClass.id,
+      date: trainingClass.starts_at.slice(0, 10),
+      title: trainingClass.title ?? "Capacitação",
+    })),
+    enrollments.map((enrollment) => ({
+      classId: enrollment.class_id,
+      memberId: enrollment.member_id,
+      status: attendanceByEnrollment.get(enrollment.id) ?? null,
+      hours: Number(enrollment.completed_workload_hours),
+    })),
+    rows.map((row) => ({
+      profileId: row.profile_id,
+      date: row.activity_date,
+      title: row.activity_title,
+      preparationHours: Number(row.preparation_hours),
+      meetingHours: Number(row.meeting_hours),
+    })),
+  );
+
   const totalPreparation = rows.reduce((sum, row) => sum + Number(row.preparation_hours), 0);
   const totalMeeting = rows.reduce((sum, row) => sum + Number(row.meeting_hours), 0);
 
@@ -83,7 +131,7 @@ export default async function CoordinationHoursPage() {
         <header className="mt-5 border-b border-stone-200 pb-6">
           <h1 className="text-3xl font-semibold">Horas da coordenação operacional</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-            Controle separado das capacitações dos alunos. Registra a preparação e a participação em reuniões dos acadêmicos colaboradores. As horas dos professores não são calculadas aqui.
+            Cada etapa mostra se o acadêmico colaborador recebeu horas. As reuniões são lançadas em controle próprio; as capacitações vêm da chamada da turma. As horas dos professores não são calculadas aqui.
           </p>
           {cycle ? <p className="mt-2 text-sm text-stone-500">{cycle.name}</p> : null}
         </header>
@@ -96,23 +144,29 @@ export default async function CoordinationHoursPage() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle className="text-lg">Total por pessoa</CardTitle>
+            <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
+            <p className="text-sm text-stone-500">“4 h” indica crédito recebido; “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
-            <Table>
-              <TableHeader><TableRow><TableHead className="pl-6">Acadêmico colaborador</TableHead><TableHead>Preparação</TableHead><TableHead>Reunião</TableHead><TableHead className="pr-6">Total</TableHead></TableRow></TableHeader>
+            <Table className="min-w-[1100px]">
+              <TableHeader><TableRow>
+                <TableHead className="pl-6">Acadêmico colaborador</TableHead>
+                {matrix.stages.map((stage) => <TableHead key={stage.key} className="min-w-36"><span className="block">{formatStageDate(stage.date)}</span><span className="block max-w-40 text-xs font-normal leading-tight">{stage.title}</span></TableHead>)}
+                <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead className="pr-6">Total</TableHead>
+              </TableRow></TableHeader>
               <TableBody>
-                {[...totals].sort(([a], [b]) => (names.get(a) ?? a).localeCompare(names.get(b) ?? b, "pt-BR")).map(([profileId, value]) => (
-                  <TableRow key={profileId}>
-                    <TableCell className="pl-6 font-semibold">{names.get(profileId) ?? "Cadastro não localizado"}</TableCell>
-                    <TableCell>{formatHours(value.preparation)}</TableCell>
-                    <TableCell>{formatHours(value.meeting)}</TableCell>
-                    <TableCell className="pr-6 font-semibold">{formatHours(value.preparation + value.meeting)}</TableCell>
+                {matrix.participants.map((person) => (
+                  <TableRow key={person.profileId}>
+                    <TableCell className="pl-6 font-semibold">{person.fullName}</TableCell>
+                    {person.cells.map((cell, index) => <TableCell key={matrix.stages[index].key} className="whitespace-nowrap text-xs">{cell.status === "recebeu" ? formatHours(cell.hours) : cell.status === "ausente" ? "0 h · falta" : "—"}</TableCell>)}
+                    <TableCell>{formatHours(person.trainingHours)}</TableCell>
+                    <TableCell>{formatHours(person.coordinationHours)}</TableCell>
+                    <TableCell className="pr-6 font-semibold">{formatHours(person.totalHours)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            {!rows.length ? <p className="p-6 text-sm text-stone-500">Ainda não há horas registradas neste controle.</p> : null}
+            {!matrix.participants.length ? <p className="p-6 text-sm text-stone-500">Ainda não há acadêmicos colaboradores vinculados ao ciclo.</p> : null}
           </CardContent>
         </Card>
 
@@ -149,4 +203,9 @@ function SummaryCard({ label, hours }: { label: string; hours: number }) {
 
 function formatHours(hours: number) {
   return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(hours)} h`;
+}
+
+function formatStageDate(date: string) {
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year}`;
 }
