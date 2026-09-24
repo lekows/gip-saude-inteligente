@@ -32,3 +32,4 @@ Thumbs.db
 # private attendance reports and working data
 /output/
 /tmp/pdfs/
+/supabase/.temp/
