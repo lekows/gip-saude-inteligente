@@ -98,7 +98,7 @@ export default async function MyGipPage() {
                     {journey.attendancePercent === null ? "--" : `${journey.attendancePercent}%`}
                   </p>
                   <p className="mt-2 text-sm text-stone-600">
-                    {journey.attendedClasses} presença(s) em {journey.enrolledClasses} encontro(s)
+                    {journey.attendedClasses} presença(s) em {journey.recordedClasses} chamada(s) registrada(s)
                   </p>
                 </CardContent>
               </Card>

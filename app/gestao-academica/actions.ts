@@ -41,14 +41,6 @@ const pilotTrainings = [
     workloadHours: 10,
   },
   {
-    title: "Capacitação 3 - Gestão, 5W2H e instrumentos de coleta",
-    description: "Planejamento prático, entrevistas e construção de matrizes de trabalho.",
-    area: "Gestão e coleta",
-    startsAt: "2026-09-02T18:30:00-03:00",
-    endsAt: "2026-09-02T22:30:00-03:00",
-    workloadHours: 10,
-  },
-  {
     title: "Capacitação 4 - Inteligência territorial e ação comunitária",
     description: "Mapas, priorização territorial e preparação das ações de campo.",
     area: "Território e comunidade",
@@ -157,18 +149,26 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
     if (profileError) throw profileError;
 
     if (academicProfiles?.length) {
-      const { error: memberError } = await supabase.from("program_members").upsert(
-        academicProfiles.map((profile) => ({
+      const { data: existingMembers, error: membersLookupError } = await supabase
+        .from("program_members")
+        .select("profile_id")
+        .eq("cycle_id", cycleId);
+      if (membersLookupError) throw membersLookupError;
+      const linkedProfiles = new Set((existingMembers ?? []).map((member) => member.profile_id));
+      const missingMembers = academicProfiles
+        .filter((profile) => !linkedProfiles.has(profile.id))
+        .map((profile) => ({
           cycle_id: cycleId,
           profile_id: profile.id,
           member_role: profile.role,
           status: "ativo",
           joined_at: "2026-08-12",
           target_workload_hours: 86,
-        })),
-        { onConflict: "cycle_id,profile_id" },
-      );
-      if (memberError) throw memberError;
+        }));
+      if (missingMembers.length) {
+        const { error: memberError } = await supabase.from("program_members").insert(missingMembers);
+        if (memberError) throw memberError;
+      }
     }
 
     const [{ data: members, error: membersError }, { data: classes, error: classesError }] =
@@ -188,10 +188,23 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
       })),
     );
     if (enrollments.length) {
-      const { error } = await supabase
+      const { data: existingEnrollments, error: lookupError } = await supabase
         .from("training_enrollments")
-        .upsert(enrollments, { onConflict: "class_id,member_id" });
-      if (error) throw error;
+        .select("class_id, member_id")
+        .in("class_id", (classes ?? []).map((trainingClass) => trainingClass.id));
+      if (lookupError) throw lookupError;
+      const existingKeys = new Set(
+        (existingEnrollments ?? []).map((item) => `${item.class_id}:${item.member_id}`),
+      );
+      const missingEnrollments = enrollments.filter(
+        (item) => !existingKeys.has(`${item.class_id}:${item.member_id}`),
+      );
+      if (missingEnrollments.length) {
+        const { error } = await supabase
+          .from("training_enrollments")
+          .insert(missingEnrollments);
+        if (error) throw error;
+      }
     }
 
     const { error: auditError } = await supabase.from("audit_logs").insert({
@@ -210,7 +223,7 @@ export async function setupPilotAcademicCycle(): Promise<AcademicActionResult> {
     revalidatePath("/meu-gip");
     return {
       success: true,
-      message: `Turma piloto configurada com um encontro de integração, quatro capacitações e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
+      message: `Turma piloto configurada com quatro treinamentos e ${academicProfiles?.length ?? 0} acadêmicos aprovados.`,
     };
   } catch (error) {
     return {
@@ -308,6 +321,7 @@ export async function saveClassAttendance(
         present: records.filter((record) => record.status === "presente").length,
         absent: records.filter((record) => record.status === "ausente").length,
         justified: records.filter((record) => record.status === "justificado").length,
+        credit_per_presence_hours: Number(trainingModule.workload_hours),
       },
     });
     if (auditError) throw auditError;
