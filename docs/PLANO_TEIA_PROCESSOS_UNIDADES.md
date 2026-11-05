@@ -149,3 +149,4 @@ Não criar usuários, aprovar contas pendentes ou atribuir permissões automatic
 As contas existentes não indicam autorização para o novo módulo. Os vínculos por unidade e os validadores institucionais ainda precisam ser cadastrados por ação autorizada. Unidades sem CNES não serão deduplicadas automaticamente. O conteúdo local dos sistemas citados e suas integrações permanece a confirmar. O módulo descreve processos; não é prontuário nem fila operacional de pacientes.
 
 As implementações e seus testes serão registrados nos próximos commits e na descrição atualizada do PR. Não confundir testes da base do repositório com aceitação das funcionalidades ainda propostas.
+

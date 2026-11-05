@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { Mail, Chrome, Facebook, Monitor } from "lucide-react";
+import { safeReturnPath } from "@/lib/auth/returnPath";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const oauthProviders = [
@@ -31,13 +32,21 @@ export default function EntrarPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function authCallbackUrl() {
+    const callback = new URL("/auth/callback", window.location.origin);
+    const query = new URLSearchParams(window.location.search);
+    const next = safeReturnPath(query.get("next")) || safeReturnPath(query.get("redirect"));
+    if (next) callback.searchParams.set("next", next);
+    return callback.toString();
+  }
+
   async function signInWithProvider(provider: "google" | "azure" | "facebook") {
     setLoading(true);
     setMessage("Abrindo o provedor de acesso...");
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      const redirectTo = authCallbackUrl();
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -78,7 +87,7 @@ export default function EntrarPage() {
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+        options: { emailRedirectTo: authCallbackUrl() }
       });
       if (error) throw error;
       setMessage("Enviamos um link de acesso para o seu e-mail.");

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { safeReturnPath } from "@/lib/auth/returnPath";
 import { getAuthenticatedHome } from "@/lib/auth/accessDestination";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
+  const next = safeReturnPath(searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(`${origin}/entrar?error=auth_callback_failed`);
@@ -34,11 +35,11 @@ export async function GET(request: Request) {
     profile?.account_status === "aprovado" && profile?.active === true;
 
   if (!isApproved) {
-    return NextResponse.redirect(`${origin}/aguardando-aprovacao`);
+    return NextResponse.redirect(`${origin}/aguardando-aprovacao${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   }
 
   // Explicit internal links preserve the user's chosen destination.
-  if (next && next.startsWith("/") && !next.startsWith("//")) {
+  if (next) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 

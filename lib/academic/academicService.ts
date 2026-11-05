@@ -144,6 +144,9 @@ export async function getAcademicDashboardData(
     const attendedClasses = studentEnrollments.filter(
       (enrollment) => attendanceByEnrollment.get(enrollment.id)?.status === "presente",
     ).length;
+    const recordedClasses = studentEnrollments.filter(
+      (enrollment) => attendanceByEnrollment.has(enrollment.id),
+    ).length;
     const completedHours = sumHours(studentEnrollments);
     const targetHours = toNumber(member.target_workload_hours);
 
@@ -158,10 +161,11 @@ export async function getAcademicDashboardData(
       targetHours,
       completedHours,
       progressPercent: calculateAcademicPercent(completedHours, targetHours),
-      attendancePercent: studentEnrollments.length
-        ? calculateAcademicPercent(attendedClasses, studentEnrollments.length)
+      attendancePercent: recordedClasses
+        ? calculateAcademicPercent(attendedClasses, recordedClasses)
         : null,
       attendedClasses,
+      recordedClasses,
       enrolledClasses: studentEnrollments.length,
     } satisfies AcademicStudentSummary;
   });
@@ -173,6 +177,9 @@ export async function getAcademicDashboardData(
     );
     const presentStudents = classEnrollments.filter(
       (enrollment) => attendanceByEnrollment.get(enrollment.id)?.status === "presente",
+    ).length;
+    const recordedStudents = classEnrollments.filter(
+      (enrollment) => attendanceByEnrollment.has(enrollment.id),
     ).length;
     const module = moduleById.get(trainingClass.module_id);
 
@@ -190,8 +197,8 @@ export async function getAcademicDashboardData(
         : calculateTrainingHours(trainingClass.starts_at, trainingClass.ends_at),
       enrolledStudents: classEnrollments.length,
       presentStudents,
-      attendancePercent: classEnrollments.length
-        ? calculateAcademicPercent(presentStudents, classEnrollments.length)
+      attendancePercent: recordedStudents
+        ? calculateAcademicPercent(presentStudents, recordedStudents)
         : null,
     } satisfies AcademicClassSummary;
   });
@@ -303,8 +310,8 @@ export async function getAttendanceRoster(
       workloadHours: toNumber(moduleData.workload_hours),
       enrolledStudents: entries.length,
       presentStudents,
-      attendancePercent: entries.length
-        ? calculateAcademicPercent(presentStudents, entries.length)
+      attendancePercent: attendance.length
+        ? calculateAcademicPercent(presentStudents, attendance.length)
         : null,
     },
     entries,
@@ -349,6 +356,7 @@ export async function getStudentJourneyData(
       progressPercent: 0,
       attendancePercent: null,
       attendedClasses: 0,
+      recordedClasses: 0,
       enrolledClasses: 0,
       upcomingClass: null,
       classes: [],
@@ -426,6 +434,9 @@ export async function getStudentJourneyData(
   const attendedClasses = activeEnrollments.filter(
     (enrollment) => attendanceByEnrollment.get(enrollment.id)?.status === "presente",
   ).length;
+  const recordedClasses = activeEnrollments.filter(
+    (enrollment) => attendanceByEnrollment.has(enrollment.id),
+  ).length;
   const completedHours = sumHours(activeEnrollments);
   const targetHours = toNumber(member.target_workload_hours);
   const now = Date.now();
@@ -447,10 +458,11 @@ export async function getStudentJourneyData(
     targetHours,
     completedHours,
     progressPercent: calculateAcademicPercent(completedHours, targetHours),
-    attendancePercent: activeEnrollments.length
-      ? calculateAcademicPercent(attendedClasses, activeEnrollments.length)
+    attendancePercent: recordedClasses
+      ? calculateAcademicPercent(attendedClasses, recordedClasses)
       : null,
     attendedClasses,
+    recordedClasses,
     enrolledClasses: activeEnrollments.length,
     upcomingClass,
     classes: journeyClasses,
@@ -489,6 +501,7 @@ function emptyStudent(profile: ProfileRow): AcademicStudentSummary {
     progressPercent: 0,
     attendancePercent: null,
     attendedClasses: 0,
+    recordedClasses: 0,
     enrolledClasses: 0,
   };
 }

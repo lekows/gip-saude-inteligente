@@ -54,6 +54,7 @@ export interface MonthlyManagerMetric {
 export interface ManagerDashboardData {
   neighborhoods: NeighborhoodRisk[];
   units: HealthUnit[];
+  hospitals?: import("./sus").HealthUnit[];
   areas: ManagerArea[];
   monthlyEvolution: MonthlyManagerMetric[];
   center: readonly [number, number];

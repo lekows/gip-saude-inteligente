@@ -1,0 +1,21 @@
+name: Prepare reviewed dependency lock
+on:
+  pull_request:
+    paths:
+      - package.json
+      - .github/workflows/prepare-review-lock.yml
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --package-lock-only --ignore-scripts
+      - name: Return proposed lock for explicit commit
+        run: node -e "console.log('LOCKFILE_B64_START'+require('fs').readFileSync('package-lock.json').toString('base64')+'LOCKFILE_B64_END')"
+      - run: npm audit

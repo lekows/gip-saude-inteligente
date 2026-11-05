@@ -10,6 +10,7 @@ export default function TerritorialMapPage() {
     <LuzianiaHealthMapClient
       neighborhoods={territorialData.neighborhoods}
       units={territorialData.units}
+      hospitals={territorialData.hospitals}
     />
   );
 }

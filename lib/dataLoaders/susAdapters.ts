@@ -25,6 +25,7 @@ export function susToManagerDashboardData(dataset: SusDataset): ManagerDashboard
     center: [-16.253, -47.95],
     neighborhoods,
     units: primaryUnits.map(susUnitToAppUnit),
+    hospitals: dataset.healthUnits.filter(unit => unit.type === "HOSPITAL"),
     areas: dataset.riskMapAreas.map((area) => {
       const unit = dataset.healthUnits.find((item) => item.neighborhoodId === area.neighborhoodId);
       const highRiskPercent = area.registeredPatients
@@ -154,7 +155,8 @@ export function susToManagerDashboardData(dataset: SusDataset): ManagerDashboard
 export function susToTerritorialData(dataset: SusDataset) {
   return {
     neighborhoods: riskAreasToNeighborhoods(dataset.riskMapAreas),
-    units: primaryCareUnits(dataset).map(susUnitToAppUnit)
+    units: primaryCareUnits(dataset).map(susUnitToAppUnit),
+    hospitals: dataset.healthUnits.filter(unit => unit.type === "HOSPITAL")
   };
 }
 

@@ -12,6 +12,7 @@ import {
   Tooltip
 } from "react-leaflet";
 import L from "leaflet";
+import { HospitalProcessMarkers, ProcessUnitPopup } from "@/components/maps/ProcessUnitMarkers";
 import {
   Activity,
   Brain,
@@ -112,11 +113,14 @@ export default function LuzianiaHealthMap() {
 
 export function LuzianiaHealthMapView({
   neighborhoods = fallbackNeighborhoodRisks,
-  units = fallbackHealthUnits
+  units = fallbackHealthUnits,
+  hospitals = []
 }: {
   neighborhoods?: NeighborhoodRisk[];
   units?: HealthUnit[];
+  hospitals?: import("@/types/sus").HealthUnit[];
 }) {
+  const [showHospitals, setShowHospitals] = useState(true);
   const [mode, setMode] = useState<MapMode>("risk");
   const [condition, setCondition] = useState<HealthCondition>("hipertensao");
   const [selection, setSelection] = useState<Selection>({
@@ -217,6 +221,7 @@ export function LuzianiaHealthMapView({
           </button>
         </div>
 
+        <label className="mt-5 flex items-center gap-2 text-sm"><input type="checkbox" checked={showHospitals} onChange={e => setShowHospitals(e.target.checked)} /> Exibir hospitais <span className="text-purple-800">● H</span></label>
         <div className="mt-6">
           <h2 className="text-sm font-semibold">Filtro por condicao</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -345,6 +350,7 @@ export function LuzianiaHealthMapView({
                 <strong>{unit.name}</strong>
                 <br />
                 {unit.type} com {unit.activeTeams} equipes ativas
+                <ProcessUnitPopup name={unit.name} cnes={unit.id} />
               </Popup>
             </Marker>
           ))}
@@ -400,6 +406,7 @@ export function LuzianiaHealthMapView({
                 </Marker>
               ))
             : null}
+          {showHospitals && <HospitalProcessMarkers hospitals={hospitals} />}
         </MapContainer>
 
         <MapLegend mode={mode} />

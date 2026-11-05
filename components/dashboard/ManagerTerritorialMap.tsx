@@ -12,6 +12,7 @@ import {
   useMap
 } from "react-leaflet";
 import L from "leaflet";
+import { HospitalProcessMarkers, ProcessUnitPopup } from "@/components/maps/ProcessUnitMarkers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { luzianiaCenter } from "@/data/territorialData";
 import type {
@@ -46,10 +47,12 @@ const markerIcon = (unit: HealthUnit) =>
 export function ManagerTerritorialMap({
   areas,
   units,
+  hospitals = [],
   officialEvidence
 }: {
   areas: EnrichedManagerArea[];
   units: HealthUnit[];
+  hospitals?: import("@/types/sus").HealthUnit[];
   officialEvidence: ManagerOfficialEvidence;
 }) {
   const [mode, setMode] = useState<"official" | "mvp">("official");
@@ -58,6 +61,7 @@ export function ManagerTerritorialMap({
   const [sectorData, setSectorData] = useState<CensusSectorFeatureCollection | null>(null);
   const [selectedSector, setSelectedSector] = useState<CensusSectorFeature | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [showHospitals, setShowHospitals] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -110,6 +114,7 @@ export function ManagerTerritorialMap({
   return (
     <Card className="overflow-hidden">
       <CardHeader className="gap-4 border-b border-stone-200">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showHospitals} onChange={e => setShowHospitals(e.target.checked)} /> Hospitais e acesso aos processos <span className="text-purple-800">● H</span></label>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <CardTitle>Onde agir primeiro?</CardTitle>
@@ -253,8 +258,10 @@ export function ManagerTerritorialMap({
                 <Tooltip>
                   {unit.name} | {unit.type}
                 </Tooltip>
+                <Popup><ProcessUnitPopup name={unit.name} cnes={unit.id} /></Popup>
               </Marker>
             ))}
+            {showHospitals && <HospitalProcessMarkers hospitals={hospitals} />}
           </MapContainer>
           <div className="pointer-events-none absolute bottom-4 left-4 z-[500] border border-stone-200 bg-white/95 p-3 text-xs shadow-sm backdrop-blur">
             <p className="font-semibold text-stone-800">

@@ -26,6 +26,7 @@ export interface AcademicStudentSummary {
   progressPercent: number;
   attendancePercent: number | null;
   attendedClasses: number;
+  recordedClasses: number;
   enrolledClasses: number;
 }
 
@@ -97,6 +98,7 @@ export interface StudentJourneyData {
   progressPercent: number;
   attendancePercent: number | null;
   attendedClasses: number;
+  recordedClasses: number;
   enrolledClasses: number;
   upcomingClass: StudentJourneyClass | null;
   classes: StudentJourneyClass[];
