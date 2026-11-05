@@ -14,7 +14,7 @@ Os textos e relações do snapshot continuam preservados. As ações de opinião
 
 - Um único cabeçalho identifica o hospital. O frame não repete seu nome.
 - Os macroprocessos permanecem à esquerda; apenas o selecionado expande atividades.
-- Busca única; modos Mapa, Lista e Perguntas e informações adicionais em Mais opções.
+- Busca única; modos Mapa, Lista e Perguntas e informações adicionais em Mais opções. As matrizes completas de atividades e de validação ficam na seção Comparar informações desse menu.
 - Administração de participantes e compartilhamento ficam no menu Gerenciar.
 - O símbolo é ilustrativo, fornecido pela biblioteca de ícones da aplicação. Não é um logotipo oficial do hospital. Uma marca oficial validada pode substituí-lo posteriormente.
 - Estilo claro com tons suaves de verde e azul, maior legibilidade e menos códigos visíveis na navegação principal.
@@ -34,4 +34,12 @@ A comunicação entre o frame e o formulário continua restrita à origem e ao f
 5. Alternar lista/mapa, modos avançados, pesquisa e passo a passo.
 6. Repetir em celular e com teclado, conferindo fechar, Escape e retorno à visão geral.
 
-Esta branch é uma proposta em prévia. O ciclo autenticado de revisão visual deve ser conferido antes da integração em produção.
+## Recuperação funcional de 05/11/2026
+
+A transformação inicial do layout excluiu o bloco de eventos entre `walk` e `endDrag`. A sintaxe continuava válida, mas cliques no menu, nós, relações e opções não eram processados. A correção restaura explicitamente esses eventos no template final, sem usar o gerador temporário por substituição entre funções.
+
+Além da navegação principal, foram recuperadas as matrizes completas, com filtros e abertura dos itens; a limpeza da busca atualiza as listas imediatamente. Teia, Camadas e Sequência organizam tanto a visão geral quanto o processo selecionado. Sobre este processo recupera objetivo, descrição, áreas e responsável a confirmar, sem sobrecarregar a abertura. O histórico do frame conserva processo, item, visualização, organização e camadas; voltar e avançar recompõem a tela.
+
+`tests/processGraphBrowser.test.mjs` executa o HTML final em Chromium isolado no GitHub Actions, com a CSP da rota real e apenas dados fictícios. Exercita os cinco processos, 19 atividades, detalhes progressivos, matrizes e filtros, modos e camadas, perguntas, fontes, relações, mensagens de contribuição, teclado, passo a passo, zoom, arraste, histórico e celular. O job de navegação é separado dos testes de domínio e SQL, que também continuam obrigatórios.
+
+O teste de comunicação verifica a mensagem enviada pelo frame. Ele não grava contribuições e não substitui a conferência do envio autenticado pelo formulário com uma conta real. Autenticação, servidor de contribuições, permissões, RLS e conteúdo do levantamento permanecem preservados.
