@@ -4,7 +4,7 @@
 
 Integrar ao GIP uma teia de processos por unidade de saúde, acessível pelo mapa da rede e pelo menu Processos, com colaboração autorizada, rastreabilidade e validação institucional.
 
-Este PR inicia o trabalho com o planejamento e os critérios de aceite. Componentes, migrations, carga inicial, edição e validações funcionais serão entregues em commits posteriores. A presença deste documento não significa que essas funcionalidades já estejam disponíveis.
+O PR começou com este planejamento. A primeira entrega implementa leitura protegida da teia, convite individual de contas aprovadas, contribuições identificadas por etapa e análise com histórico. Consulte TEIA_VALIDACAO_ALUNOS.md para o uso e os limites. Edição do conteúdo de uma nova versão, anexos por equipe e aprovação institucional continuam como etapas posteriores.
 
 ## Experiência pretendida
 
