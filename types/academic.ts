@@ -102,4 +102,5 @@ export interface StudentJourneyData {
   enrolledClasses: number;
   upcomingClass: StudentJourneyClass | null;
   classes: StudentJourneyClass[];
+  fieldActivities: { activityId: string; date: string; title: string; creditedHours: number }[];
 }

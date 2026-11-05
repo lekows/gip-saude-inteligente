@@ -63,6 +63,14 @@ type AttendanceRow = {
   notes: string | null;
 };
 
+type FieldHoursRow = {
+  activity_id: string;
+  profile_id: string;
+  activity_date: string;
+  credited_hours: number | string;
+  title: string;
+};
+
 export async function getAcademicDashboardData(
   supabase: SupabaseClient,
 ): Promise<AcademicDashboardData> {
@@ -125,6 +133,11 @@ export async function getAcademicDashboardData(
   const attendance = enrollments.length
     ? await loadAttendance(supabase, enrollments.map((item) => item.id))
     : [];
+  const fieldHours = await loadFieldHours(supabase, cycleData.id);
+  const fieldHoursByProfile = new Map<string, number>();
+  for (const entry of fieldHours) {
+    fieldHoursByProfile.set(entry.profile_id, (fieldHoursByProfile.get(entry.profile_id) ?? 0) + toNumber(entry.credited_hours));
+  }
 
   const memberByProfile = new Map(members.map((member) => [member.profile_id, member]));
   const attendanceByEnrollment = new Map(
@@ -147,7 +160,7 @@ export async function getAcademicDashboardData(
     const recordedClasses = studentEnrollments.filter(
       (enrollment) => attendanceByEnrollment.has(enrollment.id),
     ).length;
-    const completedHours = sumHours(studentEnrollments);
+    const completedHours = sumHours(studentEnrollments) + (fieldHoursByProfile.get(profile.id) ?? 0);
     const targetHours = toNumber(member.target_workload_hours);
 
     return {
@@ -360,6 +373,7 @@ export async function getStudentJourneyData(
       enrolledClasses: 0,
       upcomingClass: null,
       classes: [],
+      fieldActivities: [],
     };
   }
 
@@ -401,6 +415,8 @@ export async function getStudentJourneyData(
   const attendance = enrollments.length
     ? await loadAttendance(supabase, enrollments.map((item) => item.id))
     : [];
+  const fieldHours = (await loadFieldHours(supabase, member.cycle_id))
+    .filter((entry) => entry.profile_id === profileId);
   const moduleById = new Map(
     ((modulesResult.data ?? []) as ModuleRow[]).map((module) => [module.id, module]),
   );
@@ -437,7 +453,7 @@ export async function getStudentJourneyData(
   const recordedClasses = activeEnrollments.filter(
     (enrollment) => attendanceByEnrollment.has(enrollment.id),
   ).length;
-  const completedHours = sumHours(activeEnrollments);
+  const completedHours = sumHours(activeEnrollments) + fieldHours.reduce((total, entry) => total + toNumber(entry.credited_hours), 0);
   const targetHours = toNumber(member.target_workload_hours);
   const now = Date.now();
   const upcomingClass = journeyClasses.find(
@@ -466,7 +482,29 @@ export async function getStudentJourneyData(
     enrolledClasses: activeEnrollments.length,
     upcomingClass,
     classes: journeyClasses,
+    fieldActivities: fieldHours.map((entry) => ({
+      activityId: entry.activity_id,
+      date: entry.activity_date,
+      title: entry.title,
+      creditedHours: toNumber(entry.credited_hours),
+    })),
   };
+}
+
+async function loadFieldHours(supabase: SupabaseClient, cycleId: string): Promise<FieldHoursRow[]> {
+  const { data: activities, error: activityError } = await supabase.from("activities")
+    .select("id, title").eq("cycle_id", cycleId).eq("status", "concluida");
+  if (activityError) throw activityError;
+  if (!activities?.length) return [];
+  const { data, error } = await supabase.from("activity_participant_hours")
+    .select("activity_id, profile_id, activity_date, credited_hours")
+    .in("activity_id", activities.map((activity) => activity.id));
+  if (error) throw error;
+  const titleById = new Map(activities.map((activity) => [activity.id, activity.title]));
+  return (data ?? []).map((entry) => ({
+    ...entry,
+    title: titleById.get(entry.activity_id) ?? "Atividade de campo",
+  }));
 }
 
 async function loadEnrollments(supabase: SupabaseClient, memberIds: string[]) {
