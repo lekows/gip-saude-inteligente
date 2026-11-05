@@ -32,7 +32,7 @@ async function scenario(fn, viewport = { width: 1600, height: 1050 }) {
   await page.goto(origin);
   const frame = page.frames().find(f => f.url().startsWith(origin + '/frame'));
   page.setDefaultTimeout(5000);
-  await frame.locator('#graph .node').first().waitFor();
+  await frame.locator('#graph .node').first().waitFor({ state: 'attached' });
   try { await fn(frame, page); assert.deepEqual(errors, [], 'No runtime exceptions'); }
   finally { await context.close(); }
 }
@@ -80,6 +80,8 @@ test('list, questions and both full matrices filter, clear and open contextual d
   await option(f, '[data-v="matriz"]');
   assert.deepEqual(await f.locator('#tabela th').allTextContents(), ['ID', 'Subprocesso e atividade', 'Entendimento coletado', 'Áreas / responsável', 'Sistemas e registros', 'Ponto a validar', 'Situação do levantamento']);
   await f.locator('#switchView').click(); assert(await f.locator('#cy').isVisible());
+  await option(f, '[data-v="matriz"]'); await option(f, '[data-l="teia"]'); assert(await f.locator('#cy').isVisible(), 'Selecting a diagram from a matrix opens the map');
+  await option(f, '[data-v="tabela"]'); await option(f, '[data-type="sistema"]'); assert(await f.locator('#cy').isVisible(), 'Adding a layer from a list opens the map');
 }));
 
 test('sequence, layers and web change positions; every layer and decision opens details', () => scenario(async f => {
@@ -133,7 +135,10 @@ test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigatio
   assert.notEqual(await node.getAttribute('transform'), before); assert.equal(await f.locator('#painel').isVisible(), false);
   await node.click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.1'); await close(f);
   await f.locator('#lista summary[data-macro="M05"]').click(); await title(f, 'Processo fictício 5');
-  await page.goBack(); await title(f, 'Processo fictício 4');
+  // Same-document history belongs to the iframe; there is no top-level load to wait for.
+  await page.evaluate(() => history.back()); await title(f, 'Processo fictício 4');
+  await page.evaluate(() => history.forward()); await title(f, 'Processo fictício 5');
+  await page.evaluate(() => history.back()); await title(f, 'Processo fictício 4');
   await option(f, '[data-v="matriz"]'); await f.goto(f.url()); assert.equal(await f.locator('#tabela tbody tr').count(), 6);
   await f.locator('#lista [data-scope=""]').click(); await option(f, '#fullDetail'); assert.equal(await f.locator('#graph .atividade').count(), 19);
   await option(f, '#fullDetail'); assert.equal(await f.locator('#graph .macro').count(), 5);
@@ -145,6 +150,8 @@ test('mobile: area cards, list details, close, sidebar, matrices and map without
   await f.locator('#overviewCards [data-scope="M04"]').click(); await title(f, 'Processo fictício 4');
   assert.equal(await f.locator('#tabela .activity-card').count(), 6);
   await f.locator('#tabela .activity-card').nth(3).click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.4'); await close(f);
+  await f.locator('#alt-lista').click(); await f.locator('#lista [data-activity="M04.A02"]').click();
+  assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.2'); assert.equal(await f.locator('#lista').isVisible(), false); await close(f);
   await f.locator('#alt-lista').click(); assert.equal(await f.locator('#alt-lista').getAttribute('aria-expanded'), 'true');
   await f.locator('#lista summary[data-macro="M03"]').click(); await title(f, 'Processo fictício 3'); assert.equal(await f.locator('#lista').isVisible(), false);
   await option(f, '[data-v="matriz"]'); assert.equal(await f.locator('#tabela tbody tr').count(), 4); await f.locator('#tabela button').first().click(); await close(f);
