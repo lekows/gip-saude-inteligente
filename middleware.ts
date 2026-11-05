@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession, createRedirectWithCookies } from "@/lib/supabase/middleware";
+import { safeReturnPath } from "@/lib/auth/returnPath";
 import { getAuthenticatedHome } from "@/lib/auth/accessDestination";
 
 const publicRoutes = ["/entrar", "/auth/callback", "/aguardando-aprovacao", "/comunidade", "/"];
@@ -20,7 +21,9 @@ export async function middleware(request: NextRequest) {
   // 1. Caso o usuário NÃO esteja autenticado
   if (!user || !supabase) {
     if (!isPublicRoute) {
+      const returnTo = safeReturnPath(path);
       url.pathname = "/entrar";
+      if (returnTo) url.searchParams.set("next", returnTo);
       return createRedirectWithCookies(request, url, supabaseResponse);
     }
     return supabaseResponse;
@@ -44,7 +47,9 @@ export async function middleware(request: NextRequest) {
     // Mantém a área pública disponível se a consulta de autorização falhar.
     // Rotas internas voltam ao login e serão reavaliadas na próxima tentativa.
     if (!isPublicRoute) {
+      const returnTo = safeReturnPath(path);
       url.pathname = "/entrar";
+      if (returnTo) url.searchParams.set("next", returnTo);
       return createRedirectWithCookies(request, url, supabaseResponse);
     }
     return supabaseResponse;
@@ -53,7 +58,9 @@ export async function middleware(request: NextRequest) {
   // Sem perfil cadastrado
   if (!profile) {
     if (!isPublicRoute) {
+      const returnTo = safeReturnPath(path) || safeReturnPath(url.searchParams.get("next"));
       url.pathname = "/aguardando-aprovacao";
+      if (returnTo) url.searchParams.set("next", returnTo);
       return createRedirectWithCookies(request, url, supabaseResponse);
     }
     return supabaseResponse;
@@ -65,7 +72,9 @@ export async function middleware(request: NextRequest) {
   if (!isApproved) {
     // Se tentar acessar rota protegida ou /entrar, redireciona para /aguardando-aprovacao
     if (!isPublicRoute || path === "/entrar") {
+      const returnTo = safeReturnPath(path) || safeReturnPath(url.searchParams.get("next"));
       url.pathname = "/aguardando-aprovacao";
+      if (returnTo) url.searchParams.set("next", returnTo);
       return createRedirectWithCookies(request, url, supabaseResponse);
     }
     return supabaseResponse;
@@ -73,7 +82,8 @@ export async function middleware(request: NextRequest) {
 
   // 4. Usuário APROVADO: retira das páginas de entrada/espera
   if (path === "/entrar" || path === "/aguardando-aprovacao") {
-    url.pathname = getAuthenticatedHome(request.headers, profile.role);
+    url.pathname = safeReturnPath(url.searchParams.get("next")) || getAuthenticatedHome(request.headers, profile.role);
+    url.searchParams.delete("next");
     return createRedirectWithCookies(request, url, supabaseResponse);
   }
 

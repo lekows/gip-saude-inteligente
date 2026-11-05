@@ -321,6 +321,7 @@ export function ManagerDashboardClient({ data }: { data: ManagerDashboardData })
           <ManagerTerritorialMapClient
             areas={filteredAreas.length ? filteredAreas : enrichedAreas}
             units={data.units}
+            hospitals={data.hospitals}
             officialEvidence={data.officialEvidence}
           />
         </div>

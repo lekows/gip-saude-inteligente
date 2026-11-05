@@ -22,16 +22,19 @@ const ManagerTerritorialMap = dynamic(
 export function ManagerTerritorialMapClient({
   areas,
   units,
+  hospitals,
   officialEvidence
 }: {
   areas: EnrichedManagerArea[];
   units: HealthUnit[];
+  hospitals?: import("@/types/sus").HealthUnit[];
   officialEvidence: ManagerOfficialEvidence;
 }) {
   return (
     <ManagerTerritorialMap
       areas={areas}
       units={units}
+      hospitals={hospitals}
       officialEvidence={officialEvidence}
     />
   );

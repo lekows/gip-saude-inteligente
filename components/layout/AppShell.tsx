@@ -46,6 +46,8 @@ const protectedNavItems = [
   { href: "/data-quality", label: "Qualidade", icon: ShieldCheck },
 ];
 
+const processNavItem = { href: "/processos", label: "Processos", icon: ClipboardCheck };
+
 const adminNavItem = { href: "/admin/usuarios", label: "Usuários", icon: UserCog };
 const academicManagementNavItem = {
   href: "/gestao-academica",
@@ -99,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [pathname]);
 
-  const immersiveRoute = pathname === "/mobile" || pathname === "/comunidade";
+  const immersiveRoute = pathname === "/mobile" || pathname === "/comunidade" || /^\/unidades\/\d{7}\/processos$/.test(pathname);
   const showProtectedNav = userState.isAuthenticated && userState.isApproved;
   const isAcademic =
     userState.role === "academico_colaborador" ||
@@ -108,9 +110,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Filtrar os itens de menu baseados nas permissões/papel
   const activeNavItems = showProtectedNav
     ? isAcademic
-      ? [protectedNavItems[0], myGipNavItem, evaluationsNavItem, protectedNavItems[8]]
+      ? [protectedNavItems[0], myGipNavItem, evaluationsNavItem, processNavItem, protectedNavItems[8]]
       : [
           ...protectedNavItems,
+          processNavItem,
           ...(userState.role === "administrador" || userState.role === "professor_coordenador"
             ? [academicManagementNavItem]
             : []),

@@ -17,10 +17,12 @@ const LuzianiaHealthMap = dynamic(
 
 export default function LuzianiaHealthMapClient({
   neighborhoods,
-  units
+  units,
+  hospitals
 }: {
   neighborhoods?: NeighborhoodRisk[];
   units?: HealthUnit[];
+  hospitals?: import("@/types/sus").HealthUnit[];
 }) {
-  return <LuzianiaHealthMap neighborhoods={neighborhoods} units={units} />;
+  return <LuzianiaHealthMap neighborhoods={neighborhoods} units={units} hospitals={hospitals} />;
 }
