@@ -42,3 +42,19 @@ test("visita credita somente os colaboradores confirmados, separada das reuniõe
     ["Ana", 20, 20], ["Maria", 0, 0],
   ]);
 });
+
+test("apoio administrativo declarado aparece como etapa separada sem duplicar reuniões ou campo", () => {
+  const result = buildCoordinationMatrix(
+    [{ profileId: "ana", memberId: "member-ana", fullName: "Ana" }],
+    [], [],
+    [{ profileId: "ana", date: "2026-08-11", title: "Reunião preparatória", preparationHours: 2, meetingHours: 2 }],
+    [{ activityId: "visit-1", profileId: "ana", date: "2026-11-03", title: "Visita", hours: 20 }],
+    [{ profileId: "ana", periodEnd: "2026-11-04", title: "Apoio administrativo", hours: 30 }],
+  );
+  assert.deepEqual(result.stages.map((stage) => stage.label), ["Reunião on-line", "Visita técnica", "Apoio administrativo"]);
+  assert.deepEqual(result.participants[0].cells.map((cell) => cell.hours), [4, 20, 30]);
+  assert.equal(result.participants[0].coordinationHours, 4);
+  assert.equal(result.participants[0].fieldHours, 20);
+  assert.equal(result.participants[0].administrativeHours, 30);
+  assert.equal(result.participants[0].totalHours, 54);
+});
