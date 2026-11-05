@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Hospital } from "lucide-react";
+import styles from "./ProcessReviewWorkspace.module.css";
 import { changeProcessRound, reviewProcessFeedback, sendProcessFeedback, setProcessMember } from "@/app/processos/actions";
 import { FEEDBACK_KINDS, REVIEW_DECISIONS } from "@/lib/processes/rules";
 import type { ProcessActionResult, ProcessFeedback, ProcessFeedbackReview, ProcessMap, ProcessMember, ProcessPerson } from "@/types/processReview";
@@ -21,7 +23,9 @@ export function ProcessReviewWorkspace(p: Props) {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow || event.data?.type !== "gip-process-feedback") return;
       if (typeof event.data.itemId !== "string" || !p.items.some(i => i.id === event.data.itemId)) return;
-      setItemId(event.data.itemId); setPanel("suggest");
+      setItemId(event.data.itemId);
+      if (typeof event.data.kind === "string" && Object.hasOwn(FEEDBACK_KINDS, event.data.kind)) setKind(event.data.kind as keyof typeof FEEDBACK_KINDS);
+      setPanel("suggest");
     };
     window.addEventListener("message", handler); return () => window.removeEventListener("message", handler);
   }, [p.items]);
@@ -41,16 +45,38 @@ export function ProcessReviewWorkspace(p: Props) {
     const url = URL.createObjectURL(new Blob(["\ufeff" + rows.map(r => r.map(cell).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url; a.download = `Contribuicoes_Processos_${p.cnes}_v${p.map.version}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  return <main className="flex h-dvh min-h-[500px] flex-col bg-[#f3f2ee] text-ink">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-white px-4 py-3"><div><Link href="/processos" className="text-xs text-folha underline">← Processos disponíveis</Link><h1 className="mt-1 text-base font-semibold">{p.unitName}</h1><p className="text-xs text-stone-600">Versão {p.map.version} · {p.map.status === "open" ? "Validação colaborativa aberta" : "Rodada encerrada"} · Levantamento sujeito à validação institucional</p></div><nav className="flex flex-wrap gap-2" aria-label="Revisão dos processos"><button className={button} onClick={() => open("suggest")}>Contribuir</button><button className={button} onClick={() => open("feedback")}>{p.manager ? "Contribuições" : "Minhas contribuições"} ({p.feedback.length})</button>{p.manager && <button className={button} onClick={() => open("members")}>Autorizar participantes</button>}<button className={button} onClick={copyLink}>Copiar link</button></nav></header>
+  return <main className={styles.workspace}>
+    <header className={styles.header}>
+      <div className={styles.identity}>
+        <span className={styles.symbol} aria-hidden="true"><Hospital /></span>
+        <div>
+          <Link href="/processos" className={styles.back}>← Hospitais e unidades</Link>
+          <div className={styles.eyebrow}>Luziânia · GIP Saúde Inteligente</div>
+          <h1>{p.unitName}</h1>
+          <p className={styles.subtitle}>Mapa dos processos <span className={styles.round}>{p.map.status === "open" ? "Em revisão com a equipe" : "Revisão encerrada"}</span></p>
+        </div>
+      </div>
+      <nav className={styles.actions} aria-label="Revisão dos processos">
+        <button className={styles.primary} onClick={() => open("suggest")}>Dar opinião</button>
+        <button className={styles.secondary} onClick={() => open("feedback")}>{p.manager ? "Sugestões" : "Minhas sugestões"}<span className={styles.count}>{p.feedback.length}</span></button>
+        <details className={styles.manage} onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.removeAttribute("open"); event.stopPropagation(); } }}>
+          <summary className={styles.secondary}>{p.manager ? "Gerenciar" : "Compartilhar"}<span aria-hidden="true">⌄</span></summary>
+          <div className={styles.manageMenu}>
+            {p.manager && <button onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); open("members"); }}>Participantes desta revisão</button>}
+            <button onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); void copyLink(); }}>Copiar link para compartilhar</button>
+          </div>
+        </details>
+      </nav>
+    </header>
+
     {!panel && notice && <p className={`border-b px-4 py-2 text-sm ${noticeError ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`} role="status">{notice}</p>}
-    <iframe ref={frame} src={`/api/processos/${p.map.id}/grafo`} title={`Teia de processos · ${p.unitName}`} className="min-h-0 w-full flex-1 border-0" sandbox="allow-scripts allow-same-origin" referrerPolicy="same-origin" />
+    <iframe ref={frame} src={`/api/processos/${p.map.id}/grafo`} title={`Teia de processos · ${p.unitName}`} className={styles.graph} sandbox="allow-scripts allow-same-origin" referrerPolicy="same-origin" />
     <dialog ref={dialog} onCancel={() => setPanel(null)} onClose={() => setPanel(null)} className="fixed inset-0 m-auto max-h-[92dvh] w-[min(960px,96vw)] overflow-auto rounded-xl border border-stone-300 bg-[#fcfcfb] p-0 text-ink shadow-2xl backdrop:bg-black/40">
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white px-5 py-3"><h2 className="font-semibold">{panel === "suggest" ? "Contribuir com o levantamento" : panel === "feedback" ? p.manager ? "Contribuições e análise" : "Minhas contribuições e devolutivas" : "Acesso a esta teia"}</h2><button className={button} onClick={() => setPanel(null)}>Fechar ×</button></div>
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white px-5 py-3"><h2 className="font-semibold">{panel === "suggest" ? "Sua opinião sobre este processo" : panel === "feedback" ? p.manager ? "Sugestões da equipe" : "Minhas sugestões e respostas" : "Participantes desta revisão"}</h2><button className={button} onClick={() => setPanel(null)}>Fechar ×</button></div>
       <div className="p-5">{notice && <p role="status" className={`mb-4 rounded-md border p-3 text-sm ${noticeError ? "border-amber-300 bg-amber-50" : "border-green-200 bg-green-50"}`}>{notice}</p>}
       {panel === "suggest" && (!p.canContribute || p.map.status !== "open" ? <p className="rounded-md border p-4">{p.map.status !== "open" ? "A rodada foi encerrada. Você pode consultar o histórico." : "Seu acesso é de consulta. Solicite à coordenação autorização para contribuir."}</p> : <form onSubmit={event => { event.preventDefault(); run(() => sendProcessFeedback({ mapId: p.map.id, version: p.map.version, nonce, itemId, kind, message, proposal }), () => { setMessage(""); setProposal(""); setNonce(crypto.randomUUID()); }); }}>
         <p className="mb-4 text-sm leading-6 text-stone-600">Sua contribuição será identificada e analisada pela coordenação. Descreva somente processos e responsabilidades, sem nomes, telefones, SUS ou informações clínicas de pacientes. Entender uma etapa não equivale a aprovar a rotina do hospital.</p>
-        <label className="block text-sm font-semibold">Etapa ou assunto<select className={input} value={itemId} onChange={e => setItemId(e.target.value)}>{p.items.map(i => <option key={i.id} value={i.id}>{i.id === "__map__" ? "Geral" : i.id} · {i.title}</option>)}</select></label>
+        <label className="block text-sm font-semibold">Sobre qual atividade?<select className={input} value={itemId} onChange={e => setItemId(e.target.value)}>{p.items.map(i => <option key={i.id} value={i.id}>{i.title}</option>)}</select></label>
         <label className="mt-4 block text-sm font-semibold">Tipo de contribuição<select className={input} value={kind} onChange={e => setKind(e.target.value as keyof typeof FEEDBACK_KINDS)}>{Object.entries(FEEDBACK_KINDS).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></label>
         <label className="mt-4 block text-sm font-semibold">{kind === "understood" ? "O que você compreendeu ou conseguiu conferir?" : "O que precisa ser esclarecido ou alterado?"}<textarea className={`${input} min-h-28`} required minLength={10} maxLength={3000} value={message} onChange={e => setMessage(e.target.value)} placeholder="Explique qual etapa, informação ou passagem entre setores está em discussão." /></label>
         <label className="mt-4 block text-sm font-semibold">Sua proposta {kind === "change" || kind === "new_step" ? "(obrigatória)" : "(opcional)"}<textarea className={`${input} min-h-24`} required={kind === "change" || kind === "new_step"} minLength={kind === "change" || kind === "new_step" ? 10 : undefined} maxLength={2000} value={proposal} onChange={e => setProposal(e.target.value)} placeholder="Como ficaria a atividade ou ligação? O que confirmar na próxima visita?" /></label>
