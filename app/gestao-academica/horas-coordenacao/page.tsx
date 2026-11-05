@@ -52,8 +52,9 @@ export default async function CoordinationHoursPage() {
   let classes: { id: string; title: string | null; starts_at: string }[] = [];
   let enrollments: { id: string; class_id: string; member_id: string; completed_workload_hours: number | string }[] = [];
   let attendance: { enrollment_id: string; status: "presente" | "ausente" | "justificado" }[] = [];
+  let fieldEntries: { activityId: string; profileId: string; date: string; title: string; hours: number }[] = [];
   if (cycle) {
-    const [ledgerResult, membersResult, classesResult] = await Promise.all([
+    const [ledgerResult, membersResult, classesResult, activitiesResult] = await Promise.all([
       supabase.from("coordination_hours")
         .select("id, profile_id, activity_date, activity_title, preparation_hours, meeting_hours, source_note")
         .eq("cycle_id", cycle.id).order("activity_date", { ascending: false }),
@@ -61,13 +62,31 @@ export default async function CoordinationHoursPage() {
         .eq("cycle_id", cycle.id).eq("member_role", "academico_colaborador"),
       supabase.from("training_classes").select("id, title, starts_at")
         .eq("cycle_id", cycle.id).eq("status", "concluida").order("starts_at"),
+      supabase.from("activities").select("id, title")
+        .eq("cycle_id", cycle.id).eq("status", "concluida"),
     ]);
     if (ledgerResult.error) throw ledgerResult.error;
     if (membersResult.error) throw membersResult.error;
     if (classesResult.error) throw classesResult.error;
+    if (activitiesResult.error) throw activitiesResult.error;
     rows = (ledgerResult.data ?? []) as HoursRow[];
     members = membersResult.data ?? [];
     classes = classesResult.data ?? [];
+    const activities = activitiesResult.data ?? [];
+    if (activities.length) {
+      const { data, error } = await supabase.from("activity_participant_hours")
+        .select("activity_id, profile_id, activity_date, credited_hours")
+        .in("activity_id", activities.map((activity) => activity.id));
+      if (error) throw error;
+      const titleById = new Map(activities.map((activity) => [activity.id, activity.title]));
+      fieldEntries = (data ?? []).map((entry) => ({
+        activityId: entry.activity_id,
+        profileId: entry.profile_id,
+        date: entry.activity_date,
+        title: titleById.get(entry.activity_id) ?? "Atividade de campo",
+        hours: Number(entry.credited_hours),
+      }));
+    }
     const profileIds = [...new Set([...rows.map((row) => row.profile_id), ...members.map((member) => member.profile_id)])];
     if (profileIds.length) {
       const { data: people, error: peopleError } = await supabase
@@ -119,6 +138,7 @@ export default async function CoordinationHoursPage() {
       preparationHours: Number(row.preparation_hours),
       meetingHours: Number(row.meeting_hours),
     })),
+    fieldEntries,
   );
 
   const totalPreparation = rows.reduce((sum, row) => sum + Number(row.preparation_hours), 0);
@@ -131,28 +151,29 @@ export default async function CoordinationHoursPage() {
         <header className="mt-5 border-b border-stone-200 pb-6">
           <h1 className="text-3xl font-semibold">Horas da coordenação operacional</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-            Cada etapa mostra se o acadêmico colaborador recebeu horas. As reuniões são lançadas em controle próprio; as capacitações vêm da chamada da turma. As horas dos professores não são calculadas aqui.
+            Cada etapa mostra se o acadêmico colaborador recebeu horas. As reuniões, capacitações e atividades de campo são apuradas por suas fontes próprias. As horas dos professores não são calculadas aqui.
           </p>
           {cycle ? <p className="mt-2 text-sm text-stone-500">{cycle.name}</p> : null}
         </header>
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-3">
+        <section className="mt-6 grid gap-4 sm:grid-cols-4">
           <SummaryCard label="Preparação" hours={totalPreparation} />
           <SummaryCard label="Reuniões" hours={totalMeeting} />
-          <SummaryCard label="Total registrado" hours={totalPreparation + totalMeeting} />
+          <SummaryCard label="Campo" hours={matrix.participants.reduce((sum, person) => sum + person.fieldHours, 0)} />
+          <SummaryCard label="Total registrado" hours={matrix.participants.reduce((sum, person) => sum + person.totalHours, 0)} />
         </section>
 
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
-            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line credita 4 h. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
+            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line, 4 h; a visita de 03/11, 20 h por acadêmico confirmado. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
             <Table className="min-w-[1100px]">
               <TableHeader><TableRow>
                 <TableHead className="pl-6">Acadêmico colaborador</TableHead>
                 {matrix.stages.map((stage) => <TableHead key={stage.key} className="min-w-36"><span className="block">{formatStageDate(stage.date)}</span><span className="block text-xs font-semibold">{stage.label}</span><span className="block max-w-40 text-xs font-normal leading-tight">{stage.title}</span></TableHead>)}
-                <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead className="pr-6">Total</TableHead>
+                <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead>Campo</TableHead><TableHead className="pr-6">Total</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {matrix.participants.map((person) => (
@@ -161,6 +182,7 @@ export default async function CoordinationHoursPage() {
                     {person.cells.map((cell, index) => <TableCell key={matrix.stages[index].key} className="whitespace-nowrap text-xs">{cell.status === "recebeu" ? formatHours(cell.hours) : cell.status === "ausente" ? "0 h · falta" : "—"}</TableCell>)}
                     <TableCell>{formatHours(person.trainingHours)}</TableCell>
                     <TableCell>{formatHours(person.coordinationHours)}</TableCell>
+                    <TableCell>{formatHours(person.fieldHours)}</TableCell>
                     <TableCell className="pr-6 font-semibold">{formatHours(person.totalHours)}</TableCell>
                   </TableRow>
                 ))}

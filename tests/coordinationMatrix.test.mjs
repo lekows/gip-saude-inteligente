@@ -17,13 +17,28 @@ test("matriz separa treinamentos, reuniões e falta de crédito por etapa", () =
       { profileId: "maria", date: "2026-08-11", title: "Reunião preparatória", preparationHours: 2, meetingHours: 2 },
       { profileId: "outra", date: "2026-09-15", title: "Resultados", preparationHours: 2, meetingHours: 2 },
     ],
+    [{ activityId: "visit-1", profileId: "outra", date: "2026-11-03", title: "Visita técnica", hours: 20 }],
   );
 
-  assert.deepEqual(result.stages.map((stage) => stage.date), ["2026-08-11", "2026-08-12", "2026-08-19", "2026-09-15"]);
-  assert.deepEqual(result.stages.map((stage) => stage.label), ["Reunião on-line", "Treinamento 1", "Treinamento 2", "Reunião on-line"]);
-  assert.deepEqual(result.participants[0].cells.map((cell) => cell.status), ["recebeu", "recebeu", "ausente", "sem_registro"]);
-  assert.deepEqual(result.participants[0].cells.map((cell) => cell.hours), [4, 10, 0, 0]);
+  assert.deepEqual(result.stages.map((stage) => stage.date), ["2026-08-11", "2026-08-12", "2026-08-19", "2026-09-15", "2026-11-03"]);
+  assert.deepEqual(result.stages.map((stage) => stage.label), ["Reunião on-line", "Treinamento 1", "Treinamento 2", "Reunião on-line", "Visita técnica"]);
+  assert.deepEqual(result.participants[0].cells.map((cell) => cell.status), ["recebeu", "recebeu", "ausente", "sem_registro", "sem_registro"]);
+  assert.deepEqual(result.participants[0].cells.map((cell) => cell.hours), [4, 10, 0, 0, 0]);
   assert.equal(result.participants[0].trainingHours, 10);
   assert.equal(result.participants[0].coordinationHours, 4);
+  assert.equal(result.participants[0].fieldHours, 0);
   assert.equal(result.participants[0].totalHours, 14);
+});
+
+test("visita credita somente os colaboradores confirmados, separada das reuniões", () => {
+  const result = buildCoordinationMatrix(
+    [
+      { profileId: "ana", memberId: "member-ana", fullName: "Ana" },
+      { profileId: "maria", memberId: "member-maria", fullName: "Maria" },
+    ], [], [], [],
+    [{ activityId: "visit-1", profileId: "ana", date: "2026-11-03", title: "Visita técnica", hours: 20 }],
+  );
+  assert.deepEqual(result.participants.map((person) => [person.fullName, person.fieldHours, person.totalHours]), [
+    ["Ana", 20, 20], ["Maria", 0, 0],
+  ]);
 });

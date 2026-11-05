@@ -25,12 +25,20 @@ export type CoordinationMeetingEntry = {
   meetingHours: number;
 };
 
+export type CoordinationFieldEntry = {
+  activityId: string;
+  profileId: string;
+  date: string;
+  title: string;
+  hours: number;
+};
+
 export type CoordinationStage = {
   key: string;
   date: string;
   label: string;
   title: string;
-  kind: "training" | "meeting";
+  kind: "training" | "meeting" | "field";
 };
 
 export type CoordinationCell = {
@@ -43,6 +51,7 @@ export function buildCoordinationMatrix(
   trainingStages: CoordinationTrainingStage[],
   trainingEntries: CoordinationTrainingEntry[],
   meetingEntries: CoordinationMeetingEntry[],
+  fieldEntries: CoordinationFieldEntry[] = [],
 ) {
   const meetingStages = new Map<string, CoordinationStage>();
   for (const entry of meetingEntries) {
@@ -60,20 +69,35 @@ export function buildCoordinationMatrix(
       kind: "training" as const,
     })),
     ...meetingStages.values(),
+    ...[...new Map(fieldEntries.map((entry) => [entry.activityId, {
+      key: `field:${entry.activityId}`,
+      date: entry.date,
+      label: "Visita técnica",
+      title: entry.title,
+      kind: "field" as const,
+    }])).values()],
   ].sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
 
   const trainings = new Map(trainingEntries.map((entry) => [`${entry.classId}:${entry.memberId}`, entry]));
   const meetings = new Map(meetingEntries.map((entry) => [`${entry.date}:${entry.title}:${entry.profileId}`, entry]));
+  const fields = new Map(fieldEntries.map((entry) => [`${entry.activityId}:${entry.profileId}`, entry]));
 
   const participants = people.map((person) => {
     let trainingHours = 0;
     let coordinationHours = 0;
+    let fieldHours = 0;
     const cells = stages.map((stage): CoordinationCell => {
       if (stage.kind === "training") {
         const entry = trainings.get(`${stage.key.slice("training:".length)}:${person.memberId}`);
         if (!entry?.status) return { hours: 0, status: "sem_registro" };
         if (entry.status !== "presente") return { hours: 0, status: "ausente" };
         trainingHours += entry.hours;
+        return { hours: entry.hours, status: "recebeu" };
+      }
+      if (stage.kind === "field") {
+        const entry = fields.get(`${stage.key.slice("field:".length)}:${person.profileId}`);
+        if (!entry) return { hours: 0, status: "sem_registro" };
+        fieldHours += entry.hours;
         return { hours: entry.hours, status: "recebeu" };
       }
       const entry = meetings.get(`${stage.date}:${stage.title}:${person.profileId}`);
@@ -87,7 +111,8 @@ export function buildCoordinationMatrix(
       cells,
       trainingHours,
       coordinationHours,
-      totalHours: trainingHours + coordinationHours,
+      fieldHours,
+      totalHours: trainingHours + coordinationHours + fieldHours,
     };
   }).sort((a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"));
 

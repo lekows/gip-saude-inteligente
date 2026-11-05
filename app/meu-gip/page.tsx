@@ -162,6 +162,19 @@ export default async function MyGipPage() {
                 ))}
               </CardContent>
             </Card>
+            {journey.fieldActivities.length ? (
+              <Card className="mt-5">
+                <CardHeader><CardTitle className="text-base">Minhas atividades de campo</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {journey.fieldActivities.map((activity) => (
+                    <div key={activity.activityId} className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 pt-3 text-sm">
+                      <span><strong>{activity.title}</strong><span className="block text-xs text-stone-500">{new Date(`${activity.date}T12:00:00-03:00`).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span></span>
+                      <strong>{formatHours(activity.creditedHours)}</strong>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
           </>
         )}
 
