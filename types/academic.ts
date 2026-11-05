@@ -103,4 +103,5 @@ export interface StudentJourneyData {
   upcomingClass: StudentJourneyClass | null;
   classes: StudentJourneyClass[];
   fieldActivities: { activityId: string; date: string; title: string; creditedHours: number }[];
+  administrativeActivities: { id: string; periodStart: string; periodEnd: string; title: string; creditedHours: number; validationStatus: "declarado" | "validado" }[];
 }

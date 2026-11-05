@@ -374,6 +374,7 @@ export async function getStudentJourneyData(
       upcomingClass: null,
       classes: [],
       fieldActivities: [],
+      administrativeActivities: [],
     };
   }
 
@@ -417,6 +418,11 @@ export async function getStudentJourneyData(
     : [];
   const fieldHours = (await loadFieldHours(supabase, member.cycle_id))
     .filter((entry) => entry.profile_id === profileId);
+  const { data: administrativeData, error: administrativeError } = await supabase
+    .from("administrative_hours")
+    .select("id, period_start, period_end, activity_title, credited_hours, validation_status")
+    .eq("cycle_id", member.cycle_id).eq("profile_id", profileId).order("period_end", { ascending: false });
+  if (administrativeError) throw administrativeError;
   const moduleById = new Map(
     ((modulesResult.data ?? []) as ModuleRow[]).map((module) => [module.id, module]),
   );
@@ -487,6 +493,14 @@ export async function getStudentJourneyData(
       date: entry.activity_date,
       title: entry.title,
       creditedHours: toNumber(entry.credited_hours),
+    })),
+    administrativeActivities: (administrativeData ?? []).map((entry) => ({
+      id: entry.id,
+      periodStart: entry.period_start,
+      periodEnd: entry.period_end,
+      title: entry.activity_title,
+      creditedHours: toNumber(entry.credited_hours),
+      validationStatus: entry.validation_status as "declarado" | "validado",
     })),
   };
 }

@@ -175,6 +175,22 @@ export default async function MyGipPage() {
                 </CardContent>
               </Card>
             ) : null}
+            {journey.administrativeActivities.length ? (
+              <Card className="mt-5">
+                <CardHeader>
+                  <CardTitle className="text-base">Minhas horas administrativas</CardTitle>
+                  <p className="text-xs text-stone-500">Controle separado das capacitações e visitas; as horas declaradas dependem de validação institucional para certificação.</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {journey.administrativeActivities.map((activity) => (
+                    <div key={activity.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 pt-3 text-sm">
+                      <span><strong>{activity.title}</strong><span className="block text-xs text-stone-500">{activity.periodStart.split("-").reverse().join("/")} a {activity.periodEnd.split("-").reverse().join("/")} · {activity.validationStatus === "declarado" ? "Declaradas" : "Validadas"}</span></span>
+                      <strong>{formatHours(activity.creditedHours)}</strong>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
           </>
         )}
 
