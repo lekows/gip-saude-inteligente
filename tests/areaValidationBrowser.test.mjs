@@ -36,11 +36,13 @@ test("area panel links a contribution to its activity and accepts a designated s
   try{
     for(const width of [1440,390]){
       const page=await browser.newPage({viewport:{width,height:900}});
+      page.setDefaultTimeout(7000);
+      page.on("pageerror",e=>console.error("React fixture error",e.message));
       const item={id:"M01.A01",macro:"M01",title:"Conferir pedido fictício",account:"Receber o pedido.",records:"Formulário",owner:"Equipe",area:"Área A",question:"Quem recebe?"};
       const fixture={map:{id:"map",version:1,status:"open"},unitName:"Hospital fictício",cnes:"0000001",userId:"rep",manager:false,canContribute:true,items:[item],feedback:[],reviews:[],members:[],people:[],
         validation:{macros:[{id:"M01",title:"Pedidos"}],activities:[item],ledger:{assignments:[{macro_id:"M01",mandate:"mandate",area:"Área A",active:true,assignee:"rep",assignee_name:"Equipe teste"}],events:[]}}};
-      await page.route("http://hospital.test/**",r=>r.fulfill({contentType:"text/html",body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width"><div id="root"></div>'}));
-      await page.goto("http://hospital.test/");
+      await page.route("https://hospital.test/**",r=>r.fulfill({contentType:"text/html",body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width"><div id="root"></div>'}));
+      await page.goto("https://hospital.test/");
       await page.evaluate(p=>window.fixture=p,fixture);
       await page.addStyleTag({content:css});await page.addScriptTag({content:js});
       await page.getByText("Conferir atividades (1)").click();await page.getByText(item.title,{exact:true}).first().click();

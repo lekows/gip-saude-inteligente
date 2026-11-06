@@ -94,7 +94,7 @@ export const PROCESS_GRAPH_HTML = [
   "const scopeActs=()=>D.activities.filter(a=>!E.scope||a.macro===E.scope);",
   "const scopeQs=()=>D.questions.filter(q=>!E.scope||q.macros==='Todos'||q.macros.includes(E.scope));",
   "const reviewStatus=id=>{",
-  " if(MAC[id]){const a=D.activities.filter(x=>x.macro===id);return a.every(x=>REV[x.id]?.status==='conferido')?'conferido':a.some(x=>REV[x.id]?.status==='correcao')?'correcao':'pendente';}",
+  " if(MAC[id]){const a=D.activities.filter(x=>x.macro===id);return a.length && a.every(x=>REV[x.id]?.status==='conferido')?'conferido':a.some(x=>REV[x.id]?.status==='correcao')?'correcao':'pendente';}",
   " return REV[id]?.status||(QS[id]?'questao':'pendente');",
   "};",
   "const titleOf=id=>NODES[id]?.title||id;",
