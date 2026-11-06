@@ -19,7 +19,7 @@ update public.profiles set account_status=case when id=pg_temp.f(7) then 'penden
  active=id<>pg_temp.f(8),role=case when id=pg_temp.f(1) then 'administrador'::public.app_role else 'academico_participante'::public.app_role end;
 insert into public.health_units(id,name,city) values(pg_temp.f(20),'Unidade fictícia A','Luziânia'),(pg_temp.f(21),'Unidade fictícia B','Luziânia');
 insert into public.process_maps(id,health_unit_id,title,content) values
- (pg_temp.f(22),pg_temp.f(20),'Mapa fictício A','{"macros":[{"id":"M01"}],"activities":[{"id":"M01.A01"}],"questions":[{"id":"Q01"}],"systems":[],"sources":[]}'::jsonb),
+ (pg_temp.f(22),pg_temp.f(20),'Mapa fictício A','{"macros":[{"id":"M01"}],"activities":[{"id":"M01.A01","macro":"M01"},{"id":"M01.A02","macro":"M01"}],"flows":{"scoped":{"M01":{"base":{"edges":[{"from":"M01.A01","to":"M01.A02"}]}}}},"questions":[{"id":"Q01"}],"systems":[],"sources":[]}'::jsonb),
  (pg_temp.f(23),pg_temp.f(21),'Mapa fictício B','{"macros":[],"activities":[{"id":"B01"}],"questions":[],"systems":[],"sources":[]}'::jsonb);
 select pg_temp.ok(not has_table_privilege('anon','public.process_maps','SELECT'),'anonymous grant revoked');
 select pg_temp.ok(not has_table_privilege('authenticated','public.process_feedback','UPDATE') and not has_table_privilege('authenticated','public.process_feedback','DELETE') and not has_table_privilege('authenticated','public.process_feedback','TRUNCATE'),'feedback is append-only');
@@ -38,6 +38,36 @@ insert into public.process_review_members(map_id,profile_id,granted_by,participa
  (pg_temp.f(22),pg_temp.f(2),pg_temp.f(1),'reviewer'),(pg_temp.f(22),pg_temp.f(3),pg_temp.f(1),'reviewer'),
  (pg_temp.f(22),pg_temp.f(4),pg_temp.f(1),'viewer');
 select pg_temp.denied('insert into public.process_review_members(map_id,profile_id,granted_by) values(pg_temp.f(22),pg_temp.f(7),pg_temp.f(1))','22023','cannot invite pending account');
+-- Included within the existing transaction of process_review.sql, after its memberships are installed.
+select pg_temp.login(2);
+select pg_temp.denied('select public.assign_process_area(pg_temp.f(22),''M01'',''Arquivo'',pg_temp.f(2),true,null)','42501','no self designation');
+select pg_temp.denied('insert into public.process_area_events(map_id,item_id,kind,actor,actor_name,note) values(pg_temp.f(22),''M01.A01'',''approved'',pg_temp.f(2),''Fake'',''Forjado'')','42501','no direct validation');
+select pg_temp.login(1);
+select public.assign_process_area(pg_temp.f(22),'M01','Arquivo',pg_temp.f(2),true,null);
+select pg_temp.login(2);
+create function pg_temp.sign(kind text, expected bigint, details jsonb default null) returns void language sql as $$
+ select public.record_process_area(pg_temp.f(22),'M01.A01',kind,
+ (select mandate from public.process_area_assignments where map_id=pg_temp.f(22)),expected,'Conferência fictícia de teste',details)
+$$;
+select pg_temp.denied('select pg_temp.sign(''approved'',0)','22023','approval needs details');
+select pg_temp.denied('select pg_temp.sign(''revision'',0,''{}'')','22023','five fields required');
+select pg_temp.sign('revision',0,'{"routine":"Relato fictício","owner":"Arquivo","records":"Planilha","handoff":"Recepção para arquivo","rules":"Conferir a entrega"}');
+select pg_temp.ok(exists(select from public.process_area_events where kind='reopen' and item_id='M01.A02'),'handoff reopened');
+select pg_temp.denied('select pg_temp.sign(''approved'',0)','40001','stale approval');
+select pg_temp.login(3);
+select pg_temp.denied('select pg_temp.sign(''approved'',1)','42501','different contributor cannot sign');
+select pg_temp.login(2);
+select pg_temp.sign('approved',(select max(id) from public.process_area_events where item_id='M01.A01'));
+select pg_temp.sign('correction',(select max(id) from public.process_area_events where item_id='M01.A01'));
+select pg_temp.denied('select pg_temp.sign(''approved'',(select max(id) from public.process_area_events where item_id=''M01.A01''))','22023','correction needs new revision');
+select pg_temp.login(4);
+select pg_temp.denied('select pg_temp.sign(''revision'',0)','42501','viewer cannot edit');
+select pg_temp.login(1);
+select public.assign_process_area(pg_temp.f(22),'M01','Arquivo',pg_temp.f(2),false,(select mandate from public.process_area_assignments where map_id=pg_temp.f(22)));
+select pg_temp.login(2);
+select pg_temp.denied('select pg_temp.sign(''approved'',0)','42501','withdrawn mandate');
+
+
 select pg_temp.login(2);
 select pg_temp.ok((select count(*)=1 from public.process_maps),'invited sees own map only');
 select public.submit_process_feedback(pg_temp.f(22),1,pg_temp.f(30),'M01.A01','change','Descrição fictícia de uma dúvida','Proposta fictícia para próxima visita');
