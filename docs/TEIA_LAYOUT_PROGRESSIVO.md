@@ -43,3 +43,11 @@ Além da navegação principal, foram recuperadas as matrizes completas, com fil
 `tests/processGraphBrowser.test.mjs` executa o HTML final em Chromium isolado no GitHub Actions, com a CSP da rota real e apenas dados fictícios. Exercita os cinco processos, 19 atividades, detalhes progressivos, matrizes e filtros, modos e camadas, perguntas, fontes, relações, mensagens de contribuição, teclado, passo a passo, zoom, arraste, histórico e celular. O job de navegação é separado dos testes de domínio e SQL, que também continuam obrigatórios.
 
 O teste de comunicação verifica a mensagem enviada pelo frame. Ele não grava contribuições e não substitui a conferência do envio autenticado pelo formulário com uma conta real. Autenticação, servidor de contribuições, permissões, RLS e conteúdo do levantamento permanecem preservados.
+
+## Validação pelas áreas
+
+O botão **Validação dos processos** abre a lista institucional da unidade, com filtros, resumo para impressão, atividades e histórico. A coordenação indica os representantes entre os participantes ativos com permissão de contribuição. É possível indicar mais de uma área no mesmo processo. A indicação identifica a área e o processo, e cada nova indicação exige nova confirmação dessa área.
+
+A equipe completa a rotina, os responsáveis, os registros, a passagem entre setores e as exceções. Cada representante confere os detalhes vigentes antes de assinar. O verde exige a assinatura de todas as áreas indicadas. Uma correção formal deixa o item vermelho até a próxima revisão dos detalhes. Os demais itens ficam amarelos. Uma revisão reabre os aceites da atividade e das atividades diretamente ligadas nas relações documentadas de sequência ou decisão. Um novo mapa possui seu próprio histórico. As decisões, revisões e reaberturas ficam registradas com autoria e data.
+
+O processo recebe a situação vermelha se alguma atividade exigir ajuste. Com todas as atividades verdes, ele passa a verde. A lista abre o formulário de contribuição no contexto do item e respeita a visibilidade dos textos de cada participante. A área de sugestões continua sendo o local da devolutiva da coordenação. A revisão dos detalhes é uma ação explícita e a teia exibe a descrição revisada.

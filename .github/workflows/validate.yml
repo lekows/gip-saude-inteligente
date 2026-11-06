@@ -31,10 +31,10 @@ jobs:
         with:
           node-version: 24
       - name: Install isolated browser test tools
-        run: npm install --prefix "$RUNNER_TEMP/gip-ui" --no-save --ignore-scripts playwright@1.64.1
+        run: npm install --prefix "$RUNNER_TEMP/gip-ui" --no-save --ignore-scripts playwright@1.64.1 esbuild@0.25.12 react@19.2.6 react-dom@19.2.6 lucide-react@0.468.0
       - name: Install Chromium
         run: node "$RUNNER_TEMP/gip-ui/node_modules/playwright/cli.js" install --with-deps chromium
       - name: Exercise process navigation with fictional data and production frame policy
         env:
           PLAYWRIGHT_MODULE_PATH: ${{ runner.temp }}/gip-ui/node_modules/playwright/index.mjs
-        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs
+        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs tests/areaValidationBrowser.test.mjs
