@@ -101,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [pathname]);
 
-  const immersiveRoute = pathname === "/mobile" || pathname === "/comunidade" || /^\/unidades\/\d{7}\/processos$/.test(pathname);
+  const immersiveRoute = pathname === "/mobile" || pathname === "/comunidade" || /^\/unidades\/\d{7}\/(?:processos|painel)$/.test(pathname);
   const showProtectedNav = userState.isAuthenticated && userState.isApproved;
   const isAcademic =
     userState.role === "academico_colaborador" ||

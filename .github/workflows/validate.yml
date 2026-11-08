@@ -37,4 +37,4 @@ jobs:
       - name: Exercise process navigation with fictional data and production frame policy
         env:
           PLAYWRIGHT_MODULE_PATH: ${{ runner.temp }}/gip-ui/node_modules/playwright/index.mjs
-        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs tests/areaValidationBrowser.test.mjs
+        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs tests/areaValidationBrowser.test.mjs tests/hospitalDemoBrowser.test.mjs
