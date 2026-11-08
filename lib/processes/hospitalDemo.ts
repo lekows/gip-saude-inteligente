@@ -34,6 +34,20 @@ export function summarize(rows: DemoRow[]) {
   }), { scheduled: 0, completed: 0, absent: 0, postponed: 0 });
   return { ...total, completion: total.scheduled ? total.completed / total.scheduled * 100 : null };
 }
+
+// Presentation references for the fictional agenda only. These are not hospital targets
+// and do not change the GIP's clinical or territorial scores.
+export function agendaSignal(completion: number | null) {
+  if (completion === null) return { tone: "neutral", label: "Sem agenda" } as const;
+  if (completion >= 90) return { tone: "green", label: "Referência alcançada" } as const;
+  if (completion >= 75) return { tone: "amber", label: "Atenção" } as const;
+  return { tone: "red", label: "Requer análise" } as const;
+}
+
+export function agendaComposition(rows: DemoRow[]) {
+  const sum = summarize(rows);
+  return { ...sum, unresolved: sum.scheduled - sum.completed - sum.absent - sum.postponed };
+}
 export function rowError(row: DemoRow): string | null {
   if (![row.scheduled, row.completed, row.absent, row.postponed].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 99999)) {
     return "Use quantidades inteiras entre zero e 99.999.";

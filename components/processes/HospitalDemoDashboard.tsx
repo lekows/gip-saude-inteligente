@@ -2,6 +2,8 @@
 
 import { UnitNavigation } from "@/components/units/UnitNavigation";
 import { useRef, useState } from "react";
+import { Hospital, Presentation, ArrowUpRight, Eye, ClipboardCheck } from "lucide-react";
+import { ExecutiveVisuals } from "./ExecutiveVisuals";
 import { demoDays, initialDemo, rowError, stageNames, summarize } from "@/lib/processes/hospitalDemo";
 import type { DemoRow, Stage } from "@/lib/processes/hospitalDemo";
 import s from "./HospitalDemoDashboard.module.css";
@@ -44,14 +46,13 @@ export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital"
   const [cataract, setCataract] = useState(() => initialDemo(true));
   const [editRow, setEditRow] = useState<DemoRow | null>(null);
   const [message, setMessage] = useState("");
+  const [meeting, setMeeting] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const isCataract = view === "catarata";
   const allRows = isCataract ? cataract : hospital;
   const rows = allRows.filter(row => !day || row.day === day);
   const stages = [...new Set(allRows.map(row => row.stage))];
-  const total = summarize(rows);
   const operations = summarize(rows.filter(row => row.stage === "cirurgias"));
-  const postponed = total.postponed;
   const dateLabel = day || "Semana de exemplo";
 
   function switchView(next: View) {
@@ -84,11 +85,13 @@ export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital"
     setMessage("Simulação atualizada. Os valores valem enquanto esta página estiver aberta.");
   }
 
-  return <main className={s.page}>
+  return <main className={`${s.page} ${meeting ? s.meeting : ""}`}>
     <header className={s.header}>
-      <div><a href="/unidades" className={s.back}>← Unidades participantes</a>
-        <p className={s.eyebrow}>GIP · Gestão hospitalar</p><h1>{unitName}</h1>
-        <p>Uma proposta para acompanhar o atendimento, começando pelas informações disponíveis.</p></div>
+      <div className={s.headerContent}><a href="/unidades" className={s.back}>← Unidades participantes</a>
+        <p className={s.eyebrow}>GIP · Painel da direção</p><h1>{unitName}</h1>
+      </div>
+      <div className={s.emblem} aria-hidden="true"><div className={s.emblemBack}/><div className={s.emblemFront}><Hospital size={48} strokeWidth={1.25}/></div></div>
+      <button className={s.meetingButton} aria-pressed={meeting} onClick={() => setMeeting(!meeting)} title="Destacar os gráficos e recolher os detalhes de apoio"><Presentation size={16}/>{meeting ? "Sair do modo reunião" : "Modo reunião"}</button>
     </header>
     <UnitNavigation cnes={cnes} current={initialView === "catarata" ? "acoes" : "painel"}/>
     {initialView === "catarata" && <a href={`/unidades/${cnes}/acoes`} className={s.back + " " + s.actionBack}>← Ações e projetos da unidade</a>}
@@ -115,47 +118,33 @@ export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital"
         <div className={s.tools}><label>Período<select aria-label="Período" value={day} onChange={ev => { setDay(ev.target.value); setMessage(""); }}><option value="">Semana de exemplo</option>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
           <button className={s.button} onClick={edit}>Simular atualização</button><button className={s.quiet} onClick={() => window.print()}>Imprimir visão</button></div>
       </section>
-      <div className={s.kpis}>
-        <article className={s.kpi}><span>{isCataract ? "Cirurgias realizadas" : "Atendimentos realizados"}</span><strong data-testid="main-total">{integer(isCataract ? operations.completed : total.completed)}</strong><small>{isCataract ? "Exemplo em procedimentos / olhos" : "Registros de atendimento no período"}</small></article>
-        <article className={s.kpi}><span>Conclusão da agenda</span><strong>{percentage(total.completion)}</strong><small>Realizados ÷ agendados · mesmas etapas</small></article>
-        <article className={s.kpi}><span>Faltas registradas</span><strong>{integer(total.absent)}</strong><small>Ocorrências por etapa do atendimento</small></article>
-        <article className={s.kpi} data-tone="amber"><span>Adiamentos</span><strong>{integer(postponed)}</strong><small>Motivos a detalhar pela equipe</small></article>
-      </div>
-      <div className={s.charts}>
-        <section className={s.card}><div className={s.sectionTitle}><h3>Agenda e execução</h3><span className={s.muted}>{dateLabel}</span></div>
-          <div className={s.legend}><span><i className={s.pale}/>Agendados</span><span><i/>Realizados</span></div>
-          {stages.map(stage => {
-            const sum = summarize(rows.filter(row => row.stage === stage));
-            const max = Math.max(1, ...stages.map(value => summarize(rows.filter(row => row.stage === value)).scheduled));
-            return <div className={s.barGroup} key={stage}><div><b>{stageNames[stage]}</b><span>{integer(sum.completed)} de {integer(sum.scheduled)}</span></div>
-              <div className={s.track}><span style={{ width: sum.scheduled / max * 100 + "%" }} className={s.scheduled}/><span style={{ width: sum.completed / max * 100 + "%" }} className={s.completed}/></div></div>;
-          })}<p className={s.muted}>Contagens por etapa. Uma pessoa pode participar de mais de uma etapa.</p>
-        </section>
-        <section className={s.card}><div className={s.sectionTitle}><h3>{isCataract ? "Revisão após a cirurgia" : "Foco da próxima conversa"}</h3><span className={s.sample}>Exemplo</span></div>
-          {isCataract ? <><div className={s.bigStat}>{integer(summarize(rows.filter(row => row.stage === "revisoes")).completed)}<span>revisões realizadas</span></div><p>A equipe pode acompanhar quem precisa retornar e consolidar as revisões devidas e realizadas.</p><div className={s.callout}>A cobertura do acompanhamento exige confirmar quais revisões já eram devidas no período.</div><p className={s.muted}>A proporção de revisão pós-operatória será definida com o hospital.</p></> :
-            <><div className={s.bigStat}>{integer(operations.completed)}<span>cirurgias realizadas no exemplo</span></div><p>Conferir os motivos de adiamento e a passagem entre regulação, preparo e programação.</p><a className={s.textLink} href={`/unidades/${cnes}/processos/validacao?atividade=M04.A01`}>Conferir o processo de cirurgias →</a></>}
-        </section>
-      </div>
-      {!isCataract && <section className={s.card + " " + s.gaps}><div className={s.sectionTitle}><div><h3>Pendências ao longo do atendimento</h3><p className={s.muted}>Informações a levantar com os setores para a primeira versão real.</p></div></div>
+      <ExecutiveVisuals rows={rows} allRows={allRows} stages={stages} day={day} onDayChange={value => {setDay(value);setMessage("");}} cataract={isCataract} cnes={cnes}/>
+      <section className={s.focusCard}>
+        <div className={s.focusIcon}>{isCataract ? <Eye size={25}/> : <ClipboardCheck size={25}/>}</div>
+        <div><p className={s.eyebrow}>Pauta para a próxima conversa</p><h3>{isCataract ? "Acompanhar também o retorno após a cirurgia" : "Da regulação à cirurgia: conferir as passagens"}</h3>
+          <p>{isCataract ? `${integer(summarize(rows.filter(row => row.stage === "revisoes")).completed)} revisões realizadas no exemplo. A cobertura depende de saber quais revisões já eram devidas no período.` : `${integer(operations.completed)} cirurgias realizadas no exemplo. Levantar os motivos de adiamento e as pendências de preparo com a equipe.`}</p></div>
+        <a href={`/unidades/${cnes}/${isCataract ? "acoes" : "processos/validacao?atividade=M04.A01"}`}>{isCataract ? "Ver a ação" : "Conferir o processo"}<ArrowUpRight size={16}/></a>
+      </section>
+      {!isCataract && <details className={s.card + " " + s.gaps}><summary>Informações a levantar com os setores</summary><div className={s.sectionTitle}><div><h3>Pendências ao longo do atendimento</h3><p className={s.muted}>Informações a levantar com os setores para a primeira versão real.</p></div></div>
         <div className={s.gapGrid}>{[
           ["Pedidos aguardando inclusão", "Conferir com a Secretaria e a regulação", "M04.A02"],
           ["Preparo cirúrgico pendente", "Conferir exames e avaliações", "M04.A04"],
           ["Contatos a atualizar", "Definir a base e quem pode corrigir", "M02.A01"],
           ["Prontuários a localizar", "Conferir demandas e locais de guarda", "M05.A04"],
         ].map(([title, note, item]) => <a key={item} href={`/unidades/${cnes}/processos/validacao?atividade=${item}`}><span>{title}</span><strong>A levantar</strong><small>{note} →</small></a>)}</div>
-      </section>}
-      <section className={s.card}><div className={s.sectionTitle}><div><h3>Consolidação por etapa</h3><p className={s.muted}>Base de demonstração · {dateLabel.toLowerCase()}</p></div><button className={s.quiet} onClick={downloadTemplate}>Baixar modelo de planilha</button></div>
+      </details>}
+      <details className={s.card + " " + s.consolidation}><summary>Conferir números por etapa e baixar modelo</summary><div className={s.sectionTitle}><div><h3>Consolidação por etapa</h3><p className={s.muted}>Base de demonstração · {dateLabel.toLowerCase()}</p></div><button className={s.quiet} onClick={downloadTemplate}>Baixar modelo de planilha</button></div>
         <div className={s.tableWrap}><table><thead><tr><th>Etapa</th><th>Agendados</th><th>Realizados</th><th>Faltas</th><th>Adiamentos</th><th>A esclarecer</th><th>Conclusão</th></tr></thead><tbody>{stages.map(stage => {
           const sum = summarize(rows.filter(row => row.stage === stage));
           return <tr key={stage}><th>{stageNames[stage]}</th><td>{integer(sum.scheduled)}</td><td>{integer(sum.completed)}</td><td>{integer(sum.absent)}</td><td>{integer(sum.postponed)}</td><td>{integer(sum.scheduled-sum.completed-sum.absent-sum.postponed)}</td><td>{percentage(sum.completion)}</td></tr>;
         })}</tbody></table></div>
-      </section>
+      </details>
       <section className={s.note}><div><h3>Da planilha ao painel</h3><p>Atualização manual → conferência da área → resumo para a gestão.</p></div><span>Responsável e periodicidade a combinar</span></section>
       <footer className={s.footer}><span role="status">{message || "Os totais deste painel são fictícios e servem para discutir o formato com a direção."}</span><button className={s.quiet} onClick={reset}>Restaurar exemplo</button></footer>
     </>}
 
-    <dialog ref={dialog} className={s.dialog} onCancel={() => setMessage("")}>
-      <div className={s.sectionTitle}><h2>Simular atualização da planilha</h2><button className={s.quiet} onClick={() => { dialog.current?.close(); setMessage(""); }}>Fechar</button></div>
+    <dialog ref={dialog} className={s.dialog} aria-labelledby="simulation-title" onCancel={() => setMessage("")}>
+      <div className={s.sectionTitle}><h2 id="simulation-title">Simular atualização da planilha</h2><button className={s.quiet} onClick={() => { dialog.current?.close(); setMessage(""); }}>Fechar</button></div>
       <p>Quantidades fictícias para demonstrar a alimentação manual.</p>
       {editRow && <form onSubmit={ev => { ev.preventDefault(); save(); }}>
         <div className={s.formGrid}><label>Dia<select aria-label="Dia" value={editRow.day} onChange={ev => chooseRow(ev.target.value, editRow.stage)}>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
