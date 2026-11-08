@@ -64,6 +64,7 @@ export function ProcessReviewWorkspace(p: Props) {
         </div>
       </div>
       <nav className={styles.actions} aria-label="Revisão dos processos">
+        <Link className={styles.secondary} href={`/unidades/${p.cnes}/painel`}>Painel gerencial · demonstração</Link>
         <Link className={styles.secondary} href={`/unidades/${p.cnes}/processos${p.validation?"":"/validacao"}`}>{p.validation?"Voltar à teia":"Validação dos processos"}</Link>
         <button className={styles.primary} onClick={() => open("suggest")}>Dar opinião</button>
         <button className={styles.secondary} onClick={() => { setFeedbackItem(null); open("feedback"); }}>{p.manager ? "Sugestões" : "Minhas sugestões"}<span className={styles.count}>{p.feedback.length}</span></button>
