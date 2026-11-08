@@ -1,0 +1,7 @@
+.nav{display:flex;gap:25px;flex:none;padding:0 28px;border-top:1px solid #e4ece8;border-bottom:1px solid #dbe7e1;background:#fff;overflow:auto;font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.nav a{color:#647c71;text-decoration:none;white-space:nowrap;padding:13px 1px 11px;border-bottom:3px solid transparent}
+.nav a[aria-current=page]{color:#087f83;border-color:#087f83;font-weight:650}
+.nav a:focus-visible{outline:3px solid #41aca6;outline-offset:-3px}
+@media(max-width:620px){.nav{padding:0 17px;gap:20px;font-size:12px}}
+@media print{.nav{display:none}}
+

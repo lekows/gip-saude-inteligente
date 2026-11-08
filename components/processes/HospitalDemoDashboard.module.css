@@ -18,3 +18,5 @@
 
 .gaps{margin-bottom:18px}.gapGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:14px}.gapGrid a{text-decoration:none;border-left:2px solid #d9e6df;padding-left:12px;display:flex;flex-direction:column;gap:5px}.gapGrid a>span{font-size:12px;color:#5c776b}.gapGrid strong{font-size:17px;color:#9a7a36;font-weight:550}.gapGrid small{font-size:11px;color:#7b8b80}
 @media(max-width:760px){.gapGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.demo{margin-top:18px}.actionBack{display:inline-block;margin-top:15px}

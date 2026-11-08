@@ -1,5 +1,6 @@
 "use client";
 
+import { UnitNavigation } from "@/components/units/UnitNavigation";
 import { useRef, useState } from "react";
 import { demoDays, initialDemo, rowError, stageNames, summarize } from "@/lib/processes/hospitalDemo";
 import type { DemoRow, Stage } from "@/lib/processes/hospitalDemo";
@@ -36,8 +37,8 @@ function downloadTemplate() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function HospitalDemoDashboard({ unitName, cnes }: { unitName: string; cnes: string }) {
-  const [view, setView] = useState<View>("hospital");
+export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital" }: { unitName: string; cnes: string; initialView?: "hospital" | "catarata" }) {
+  const [view, setView] = useState<View>(initialView);
   const [day, setDay] = useState("");
   const [hospital, setHospital] = useState(() => initialDemo(false));
   const [cataract, setCataract] = useState(() => initialDemo(true));
@@ -85,17 +86,18 @@ export function HospitalDemoDashboard({ unitName, cnes }: { unitName: string; cn
 
   return <main className={s.page}>
     <header className={s.header}>
-      <div><a href={`/unidades/${cnes}/processos`} className={s.back}>← Teia de processos</a>
+      <div><a href="/unidades" className={s.back}>← Unidades participantes</a>
         <p className={s.eyebrow}>GIP · Gestão hospitalar</p><h1>{unitName}</h1>
         <p>Uma proposta para acompanhar o atendimento, começando pelas informações disponíveis.</p></div>
-      <a className={s.button} href={`/unidades/${cnes}/processos/validacao`}>Validar processos</a>
     </header>
+    <UnitNavigation cnes={cnes} current={initialView === "catarata" ? "acoes" : "painel"}/>
+    {initialView === "catarata" && <a href={`/unidades/${cnes}/acoes`} className={s.back + " " + s.actionBack}>← Ações e projetos da unidade</a>}
     <div className={s.demo}><span className={s.dot} /><strong>Demonstração com dados fictícios</strong>
       <span>Fontes previstas: planilhas conferidas e lançamento manual.</span></div>
-    <nav className={s.tabs} aria-label="Visões do painel">
-      {([["hospital", "Visão do hospital"], ["catarata", "Ação de catarata"], ["alimentacao", "Como começar"]] as const).map(([value, title]) =>
+    {initialView === "hospital" && <nav className={s.tabs} aria-label="Visões do painel">
+      {([["hospital", "Painel"], ["alimentacao", "Como atualizar"]] as const).map(([value, title]) =>
         <button key={value} aria-pressed={view === value} onClick={() => switchView(value)}>{title}</button>)}
-    </nav>
+    </nav>}
 
     {view === "alimentacao" ? <section className={s.start}>
       <div className={s.sectionTitle}><div><p className={s.eyebrow}>Próximo passo</p><h2>Começar pela rotina que o hospital já registra</h2></div><button className={s.button} onClick={downloadTemplate}>Baixar modelo de planilha</button></div>

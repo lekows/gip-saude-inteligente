@@ -27,6 +27,12 @@ export const dynamic = "force-dynamic";
 
 const modules = [
   {
+    href: "/unidades",
+    title: "Unidades participantes",
+    description: "Painéis, ações e processos de cada hospital e unidade do projeto.",
+    icon: HeartPulse
+  },
+  {
     href: "/manager-dashboard",
     title: "Dashboard do gestor",
     description: "Metas, cobertura, alto risco, triagens, mutiroes e ranking prioritario.",
@@ -158,6 +164,9 @@ function PublicHome({ authenticated }: { authenticated: boolean }) {
               em saúde pública em Luziânia.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/unidades" className="inline-flex h-12 items-center justify-center gap-2 bg-folha px-5 text-sm font-semibold text-white hover:bg-[#17623d]">
+                Unidades participantes <ArrowRight size={18}/>
+              </Link>
               <Link
                 href={primaryHref}
                 className="inline-flex h-12 items-center justify-center gap-2 bg-folha px-5 text-sm font-semibold text-white hover:bg-[#17623d]"
@@ -224,19 +233,18 @@ function OperationalHome() {
               Central operacional
             </p>
             <h1 className="mt-3 max-w-4xl text-3xl font-semibold leading-tight lg:text-5xl">
-              Inteligencia territorial para gestao publica em saude.
+              Acompanhe o GIP em cada unidade de saúde.
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">
-              Acesse os modulos do GIP Saude Inteligente para monitorar
-              cobertura, auditar dados SUS, priorizar bairros e planejar
-              mutiroes preventivos com dados agregados.
+              Escolha uma unidade participante para consultar seu painel,
+              acompanhar ações e projetos e validar os processos com as áreas.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                href="/manager-dashboard"
+                href="/unidades"
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-folha px-5 text-sm font-semibold text-white shadow-sm hover:bg-[#17623d]"
               >
-                Abrir dashboard
+                Escolher unidade de saúde
                 <ArrowRight size={16} />
               </Link>
               <Link
@@ -265,7 +273,7 @@ function OperationalHome() {
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                 <MiniMetric label="Arquivos" value={summary.files} />
                 <MiniMetric label="Bairros" value={summary.neighborhoods} />
-                <MiniMetric label="Unidades" value={summary.healthUnits} />
+                <MiniMetric label="Unidades na base CNES" value={summary.healthUnits} />
                 <MiniMetric label="Alertas" value={summary.issues} />
               </div>
               <Link

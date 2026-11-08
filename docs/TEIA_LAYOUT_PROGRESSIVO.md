@@ -51,3 +51,19 @@ O botão **Validação dos processos** abre a lista institucional da unidade, co
 A equipe completa a rotina, os responsáveis, os registros, a passagem entre setores e as exceções. Cada representante confere os detalhes vigentes antes de assinar. O verde exige a assinatura de todas as áreas indicadas. Uma correção formal deixa o item vermelho até a próxima revisão dos detalhes. Os demais itens ficam amarelos. Uma revisão reabre os aceites da atividade e das atividades diretamente ligadas nas relações documentadas de sequência ou decisão. Um novo mapa possui seu próprio histórico. As decisões, revisões e reaberturas ficam registradas com autoria e data.
 
 O processo recebe a situação vermelha se alguma atividade exigir ajuste. Com todas as atividades verdes, ele passa a verde. A lista abre o formulário de contribuição no contexto do item e respeita a visibilidade dos textos de cada participante. A área de sugestões continua sendo o local da devolutiva da coordenação. A revisão dos detalhes é uma ação explícita e a teia exibe a descrição revisada.
+
+## Navegação por unidade
+
+O início do GIP destaca Unidades participantes. A seleção usa as unidades ativas que possuem trabalhos acessíveis à conta, consolida as versões de um mesmo mapa e mantém a verificação de acesso no servidor.
+
+A entrada de cada unidade é seu painel. A navegação fixa oferece Painel da unidade, Ações e projetos e Processos. A catarata do Hospital Municipal do Jardim Ingá fica em Ações e projetos, com sua proposta de acompanhamento e demonstração. A teia e a validação são modos internos de Processos. O mapa territorial abre a página da unidade.
+
+Endereços principais:
+- /unidades
+- /unidades/[cnes]
+- /unidades/[cnes]/acoes
+- /unidades/[cnes]/acoes/catarata (proposta do Jardim Ingá)
+- /unidades/[cnes]/processos
+- /unidades/[cnes]/processos/validacao
+
+O catálogo antigo /processos encaminha para /unidades. O painel antigo /unidades/[cnes]/painel encaminha para a entrada da unidade. Os links compartilhados da teia e da validação continuam sendo destinos diretos e retornam corretamente após login.
