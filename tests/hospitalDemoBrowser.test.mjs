@@ -12,7 +12,7 @@ test("director dashboard filters, simulates updates, restores examples and downl
       import React from 'react';
       import {createRoot} from 'react-dom/client';
       import {HospitalDemoDashboard} from './components/processes/HospitalDemoDashboard';
-      createRoot(document.getElementById('root')).render(<HospitalDemoDashboard unitName="Hospital fictício" cnes="0000001"/>);
+      createRoot(document.getElementById('root')).render(<HospitalDemoDashboard unitName="Hospital fictício" cnes="5882451" initialView={location.pathname.endsWith("/acoes/catarata") ? "catarata" : "hospital"}/>);
     `, loader: "tsx", resolveDir: resolve(".") },
     jsx: "automatic", bundle: true, write: false, outfile: "dashboard.js",
     nodePaths: [dirname(dirname(process.env.PLAYWRIGHT_MODULE_PATH))],
@@ -32,7 +32,17 @@ test("director dashboard filters, simulates updates, restores examples and downl
       await page.addStyleTag({ content: css });
       await page.addScriptTag({ content: js });
       await page.getByText("Demonstração com dados fictícios", { exact: true }).waitFor();
-      await page.getByRole("button", { name: "Ação de catarata", exact: true }).click();
+      const nav = page.getByRole("navigation", { name: "Navegação da unidade" });
+      assert.equal(await nav.getByRole("link", {name:"Painel da unidade"}).getAttribute("href"), "/unidades/5882451");
+      assert.equal(await nav.getByRole("link", {name:"Ações e projetos"}).getAttribute("href"), "/unidades/5882451/acoes");
+      assert.equal(await nav.getByRole("link", {name:"Processos",exact:true}).getAttribute("href"), "/unidades/5882451/processos");
+      await page.getByRole("button", { name: "Como atualizar", exact: true }).click();
+      await page.getByText("A confirmar pelo hospital", {exact:true}).waitFor();
+      await page.goto("https://hospital.test/unidades/5882451/acoes/catarata");
+      await page.addStyleTag({ content: css });
+      await page.addScriptTag({ content: js });
+      await page.getByTestId("main-total").waitFor();
+      assert.equal(await page.getByRole("navigation", {name:"Navegação da unidade"}).getByRole("link", {name:"Ações e projetos"}).getAttribute("aria-current"), "page");
       assert.equal(await page.getByTestId("main-total").textContent(), "198");
       await page.getByLabel("Período", { exact: true }).selectOption("Segunda");
       assert.equal(await page.getByTestId("main-total").textContent(), "40");
@@ -57,8 +67,7 @@ test("director dashboard filters, simulates updates, restores examples and downl
       assert(content.includes("responsavel_conferencia"));
       assert(!/CPF|telefone|nome_paciente/i.test(content));
       assert.equal(content.trim().split("\n").length, 1, "Blank template, without fabricated records");
-      await page.getByRole("button", { name: "Como começar", exact: true }).click();
-      await page.getByText("A confirmar pelo hospital", { exact: true }).waitFor();
+      assert.equal(await page.getByRole("link", { name: "← Ações e projetos da unidade", exact: true }).getAttribute("href"), "/unidades/5882451/acoes");
       assert.equal(await page.locator("html").evaluate(el => el.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []);
       await page.close();

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UnitNavigation } from "@/components/units/UnitNavigation";
 import { Hospital } from "lucide-react";
 import styles from "./ProcessReviewWorkspace.module.css";
 import { changeProcessRound, reviewProcessFeedback, sendProcessFeedback, setProcessMember } from "@/app/processos/actions";
@@ -57,15 +58,13 @@ export function ProcessReviewWorkspace(p: Props) {
       <div className={styles.identity}>
         <span className={styles.symbol} aria-hidden="true"><Hospital /></span>
         <div>
-          <Link href="/processos" className={styles.back}>← Hospitais e unidades</Link>
+          <Link href="/unidades" className={styles.back}>← Unidades participantes</Link>
           <div className={styles.eyebrow}>Luziânia · GIP Saúde Inteligente</div>
           <h1>{p.unitName}</h1>
           <p className={styles.subtitle}>Mapa dos processos <span className={styles.round}>{p.map.status === "open" ? "Em revisão com a equipe" : "Revisão encerrada"}</span></p>
         </div>
       </div>
       <nav className={styles.actions} aria-label="Revisão dos processos">
-        <Link className={styles.secondary} href={`/unidades/${p.cnes}/painel`}>Painel gerencial · demonstração</Link>
-        <Link className={styles.secondary} href={`/unidades/${p.cnes}/processos${p.validation?"":"/validacao"}`}>{p.validation?"Voltar à teia":"Validação dos processos"}</Link>
         <button className={styles.primary} onClick={() => open("suggest")}>Dar opinião</button>
         <button className={styles.secondary} onClick={() => { setFeedbackItem(null); open("feedback"); }}>{p.manager ? "Sugestões" : "Minhas sugestões"}<span className={styles.count}>{p.feedback.length}</span></button>
         <details className={styles.manage} onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.removeAttribute("open"); event.stopPropagation(); } }}>
@@ -77,6 +76,11 @@ export function ProcessReviewWorkspace(p: Props) {
         </details>
       </nav>
     </header>
+    <UnitNavigation cnes={p.cnes} current="processos"/>
+    <nav className={styles.processModes} aria-label="Visualização dos processos">
+      <Link href={`/unidades/${p.cnes}/processos`} aria-current={!p.validation?"page":undefined}>Teia de processos</Link>
+      <Link href={`/unidades/${p.cnes}/processos/validacao`} aria-current={p.validation?"page":undefined}>Validação pelas áreas</Link>
+    </nav>
 
     {!panel && notice && <p className={`border-b px-4 py-2 text-sm ${noticeError ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`} role="status">{notice}</p>}
     {p.validation ? <AreaValidationPanel focusItem={p.activityId} {...p.validation} map={p.map} cnes={p.cnes} manager={p.manager} canContribute={p.canContribute} userId={p.userId}

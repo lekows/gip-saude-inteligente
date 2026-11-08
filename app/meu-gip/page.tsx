@@ -58,7 +58,7 @@ export default async function MyGipPage() {
           <ArrowRight size={22} className="shrink-0" />
         </Link>
 
-        <Link href="/processos" className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-blue-200 bg-blue-50 px-5 py-4 text-blue-900"><span><strong className="block">Processos das unidades de saúde</strong><span className="mt-1 block text-sm">Percorra as teias para as quais você recebeu acesso e registre dúvidas ou sugestões.</span></span><ArrowRight size={22} className="shrink-0" /></Link>
+        <Link href="/unidades" className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-blue-200 bg-blue-50 px-5 py-4 text-blue-900"><span><strong className="block">Unidades participantes</strong><span className="mt-1 block text-sm">Escolha a unidade e acompanhe seus projetos, painéis e processos.</span></span><ArrowRight size={22} className="shrink-0" /></Link>
 
         {!journey.cycle ? (
           <section className="mt-6 border border-stone-200 bg-white p-6 sm:p-8">
