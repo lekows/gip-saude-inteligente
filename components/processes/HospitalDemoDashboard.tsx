@@ -90,7 +90,7 @@ export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital"
       <div className={s.headerContent}><a href="/unidades" className={s.back}>← Unidades participantes</a>
         <p className={s.eyebrow}>GIP · Painel da direção</p><h1>{unitName}</h1>
       </div>
-      <div className={s.emblem} aria-hidden="true"><div className={s.emblemBack}/><div className={s.emblemFront}><Hospital size={48} strokeWidth={1.25}/></div><span>GIP</span></div>
+      <div className={s.emblem} aria-hidden="true"><div className={s.emblemBack}/><div className={s.emblemFront}><Hospital size={48} strokeWidth={1.25}/></div></div>
       <button className={s.meetingButton} aria-pressed={meeting} onClick={() => setMeeting(!meeting)} title="Destacar os gráficos e recolher os detalhes de apoio"><Presentation size={16}/>{meeting ? "Sair do modo reunião" : "Modo reunião"}</button>
     </header>
     <UnitNavigation cnes={cnes} current={initialView === "catarata" ? "acoes" : "painel"}/>
