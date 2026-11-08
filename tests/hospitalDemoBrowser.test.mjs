@@ -58,7 +58,7 @@ test("director dashboard filters, simulates updates, restores examples and downl
       assert(!/CPF|telefone|nome_paciente/i.test(content));
       assert.equal(content.trim().split("\n").length, 1, "Blank template, without fabricated records");
       await page.getByRole("button", { name: "Como começar", exact: true }).click();
-      await page.getByText("Pessoas distintas atendidas", { exact: true }).waitFor();
+      await page.getByText("A confirmar pelo hospital", { exact: true }).waitFor();
       assert.equal(await page.locator("html").evaluate(el => el.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []);
       await page.close();
