@@ -110,7 +110,7 @@ export function HospitalDemoDashboard({ unitName, cnes }: { unitName: string; cn
       <section className={s.toolbar}><div><p className={s.eyebrow}>{isCataract ? "Mutirão · proposta de acompanhamento" : "Rotina · proposta de acompanhamento"}</p>
         <h2>{isCataract ? "Do agendamento à revisão da catarata" : "O que aconteceu e o que pede atenção"}</h2>
         <p>{isCataract ? "Calendário e metas da ação aguardam confirmação. Todos os totais abaixo são exemplos." : "Exemplo de produção registrada em três etapas da rotina."}</p></div>
-        <div className={s.tools}><label>Período<select value={day} onChange={ev => { setDay(ev.target.value); setMessage(""); }}><option value="">Semana de exemplo</option>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
+        <div className={s.tools}><label>Período<select aria-label="Período" value={day} onChange={ev => { setDay(ev.target.value); setMessage(""); }}><option value="">Semana de exemplo</option>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
           <button className={s.button} onClick={edit}>Simular atualização</button><button className={s.quiet} onClick={() => window.print()}>Imprimir visão</button></div>
       </section>
       <div className={s.kpis}>
@@ -156,8 +156,8 @@ export function HospitalDemoDashboard({ unitName, cnes }: { unitName: string; cn
       <div className={s.sectionTitle}><h2>Simular atualização da planilha</h2><button className={s.quiet} onClick={() => { dialog.current?.close(); setMessage(""); }}>Fechar</button></div>
       <p>Quantidades fictícias para demonstrar a alimentação manual.</p>
       {editRow && <form onSubmit={ev => { ev.preventDefault(); save(); }}>
-        <div className={s.formGrid}><label>Dia<select value={editRow.day} onChange={ev => chooseRow(ev.target.value, editRow.stage)}>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
-          <label>Etapa<select value={editRow.stage} onChange={ev => chooseRow(editRow.day, ev.target.value as Stage)}>{stages.map(value => <option key={value} value={value}>{stageNames[value]}</option>)}</select></label>
+        <div className={s.formGrid}><label>Dia<select aria-label="Dia" value={editRow.day} onChange={ev => chooseRow(ev.target.value, editRow.stage)}>{demoDays.map(value => <option key={value}>{value}</option>)}</select></label>
+          <label>Etapa<select aria-label="Etapa" value={editRow.stage} onChange={ev => chooseRow(editRow.day, ev.target.value as Stage)}>{stages.map(value => <option key={value} value={value}>{stageNames[value]}</option>)}</select></label>
           {Object.entries(quantityNames).map(([key, title]) => <label key={key}>{title}<input type="number" min={0} max={99999} step={1} required value={Number.isNaN(editRow[key as keyof typeof quantityNames]) ? "" : editRow[key as keyof typeof quantityNames]} onChange={ev => setEditRow({ ...editRow, [key]: ev.target.value === "" ? NaN : Number(ev.target.value) })}/></label>)}</div>
         <p role="alert">{message}</p><button className={s.primary}>Atualizar demonstração</button>
       </form>}
