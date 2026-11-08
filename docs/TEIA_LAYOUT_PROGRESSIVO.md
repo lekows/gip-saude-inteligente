@@ -67,3 +67,32 @@ Endereços principais:
 - /unidades/[cnes]/processos/validacao
 
 O catálogo antigo /processos encaminha para /unidades. O painel antigo /unidades/[cnes]/painel encaminha para a entrada da unidade. Os links compartilhados da teia e da validação continuam sendo destinos diretos e retornam corretamente após login.
+
+
+## Painel executivo visual da unidade — 8 de novembro de 2026
+
+A página da unidade e a demonstração de catarata apresentam cabeçalho executivo,
+indicadores coloridos, curva semanal de agenda e execução, composição dos registros
+e semáforos por etapa. A identidade do hospital recebe um símbolo decorativo com
+profundidade; os gráficos mantêm escalas planas e comparáveis.
+
+O seletor de período e os botões dos dias filtram indicadores, composição,
+semáforos, detalhes, pauta e tabela. A curva mantém explicitamente a semana completa
+como contexto. Selecionar uma etapa abre suas ocorrências e a ligação para conferir
+o processo. A tabela e as informações ainda desconhecidas ficam recolhidas.
+
+O modo reunião amplia a composição e oculta os detalhes de apoio. Sair restaura
+os controles. A identificação de demonstração continua visível. A animação do
+símbolo e as transições respeitam prefers-reduced-motion. Dados, simulação temporária,
+exportação agregada, acesso e RLS permanecem com o comportamento anterior.
+
+Referências de semáforo para o exemplo: verde >=90%, amarelo >=75% e <90%, vermelho
+<75%, cinza sem agenda. São realizados/agendados da mesma etapa e período, sem
+arredondar antes de classificar. Não representam metas homologadas, qualidade
+clínica, score territorial/individual ou validação formal dos processos. Faltas,
+adiamentos e registros a esclarecer conciliam com o total agendado. Não há inferência
+de pessoas distintas ou cobertura pós-operatória.
+
+Verificação: teste de limites e agenda vazia, reconciliação da composição, cenários
+de computador e celular para filtros, detalhamento, modo reunião, movimento reduzido,
+simulação e download, além da suíte existente, build e audit. Sem mudança de banco.

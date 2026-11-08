@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { initialDemo, rowError, summarize } from "../lib/processes/hospitalDemo.ts";
+import { agendaComposition, agendaSignal, initialDemo, rowError, summarize } from "../lib/processes/hospitalDemo.ts";
 import { safeReturnPath } from "../lib/auth/returnPath.ts";
 
 test("demo aggregates records by stage and never derives people or postoperative coverage", () => {
@@ -16,5 +16,20 @@ test("demo aggregates records by stage and never derives people or postoperative
   assert.equal(rowError({ ...operations[0], scheduled: 0, completed: 0, absent: 0, postponed: 0 }), null);
   assert.equal(safeReturnPath("/unidades/5882451/painel"), "/unidades/5882451/painel");
   assert.equal(safeReturnPath("/unidades/5882451/painel?next=//external.invalid"), null);
+});
+
+test("illustrative agenda signals preserve empty scope and unclassified records", () => {
+  assert.equal(agendaSignal(null).tone, "neutral");
+  assert.equal(agendaSignal(0).tone, "red");
+  assert.equal(agendaSignal(74.999).tone, "red");
+  assert.equal(agendaSignal(75).tone, "amber");
+  assert.equal(agendaSignal(89.999).tone, "amber");
+  assert.equal(agendaSignal(90).tone, "green");
+  assert.equal(agendaSignal(100).tone, "green");
+  const rows = [{ day: "Segunda", stage: "cirurgias", scheduled: 10, completed: 6, absent: 1, postponed: 1 }];
+  const result = agendaComposition(rows);
+  assert.equal(result.unresolved, 2);
+  assert.equal(result.completed + result.absent + result.postponed + result.unresolved, result.scheduled);
+  assert.deepEqual(agendaComposition([]), {scheduled:0,completed:0,absent:0,postponed:0,completion:null,unresolved:0});
 });
 
