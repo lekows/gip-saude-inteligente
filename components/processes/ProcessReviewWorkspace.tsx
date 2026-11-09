@@ -9,11 +9,14 @@ import { changeProcessRound, reviewProcessFeedback, sendProcessFeedback, setProc
 import { FEEDBACK_KINDS, REVIEW_DECISIONS } from "@/lib/processes/rules";
 import type { ProcessActionResult, ProcessFeedback, ProcessFeedbackReview, ProcessMap, ProcessMember, ProcessPerson } from "@/types/processReview";
 import { AreaValidationPanel, type ValidationData } from "./AreaValidationPanel";
+import {useProcessNavigation} from "./useProcessNavigation";
+import {normalizeProcessHash,processHref} from "@/lib/processes/navigation";
 type Props = { validation:ValidationData|null; activityId?:string; map: ProcessMap; unitName: string; cnes: string; userId: string; manager: boolean; canContribute: boolean; items: { id: string; title: string }[]; feedback: ProcessFeedback[]; reviews: ProcessFeedbackReview[]; members: ProcessMember[]; people: ProcessPerson[] };
 const button = "rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:border-folha disabled:opacity-50";
 const input = "mt-1 w-full rounded-md border border-stone-300 bg-white p-2 text-sm";
 export function ProcessReviewWorkspace(p: Props) {
   const router = useRouter(), frame = useRef<HTMLIFrameElement>(null), dialog = useRef<HTMLDialogElement>(null);
+  const navigation=useProcessNavigation({cnes:p.cnes,validation:!!p.validation,activityId:p.activityId,items:p.items,frame});
   const [feedbackItem,setFeedbackItem]=useState<string|null>(null);
   const [panel, setPanel] = useState<"suggest" | "feedback" | "members" | null>(null), [pending, start] = useTransition();
   const [itemId, setItemId] = useState("__map__"), [kind, setKind] = useState<keyof typeof FEEDBACK_KINDS>("question");
@@ -28,7 +31,8 @@ export function ProcessReviewWorkspace(p: Props) {
       if (event.data?.type !== "gip-process-feedback" && event.data?.type !== "gip-process-validation") return;
       if (typeof event.data.itemId !== "string" || !p.items.some(i => i.id === event.data.itemId)) return;
       if (event.data.type === "gip-process-validation") {
-        router.push(`/unidades/${p.cnes}/processos/validacao?atividade=${encodeURIComponent(event.data.itemId)}`);
+        const q=new URLSearchParams(window.location.hash.slice(1));q.set("n",event.data.itemId);
+        router.push(processHref(p.cnes,true,normalizeProcessHash("#"+q.toString(),p.items.map(i=>i.id))));
         return;
       }
       setItemId(event.data.itemId);
@@ -46,7 +50,7 @@ export function ProcessReviewWorkspace(p: Props) {
   const formatDate = (s: string) => new Date(s).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
   const latest = (id: string) => p.reviews.filter(r => r.feedback_id === id).sort((a, b) => b.revision - a.revision)[0];
   const open = (which: typeof panel) => { setNotice(""); setPanel(which); };
-  async function copyLink() { try { await navigator.clipboard.writeText(`${window.location.origin}/unidades/${p.cnes}/processos`); setNoticeError(false); setNotice("Link copiado. Apenas contas autorizadas conseguem abrir a teia."); } catch { setNoticeError(true); setNotice("Copie o endereço desta página pela barra do navegador."); } }
+  async function copyLink() { try { await navigator.clipboard.writeText(window.location.origin+processHref(p.cnes,!!p.validation,navigation.hash)); setNoticeError(false); setNotice("Link deste ponto copiado. O acesso continua restrito às contas autorizadas."); } catch { setNoticeError(true); setNotice("Copie o endereço desta página pela barra do navegador."); } }
   function exportFeedback() {
     const cell = (s: string) => '"' + (/^\s*[=+@-]/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"';
     const rows = [["Etapa", "Tipo", "Contribuição", "Proposta", "Participante", "Data", "Análise", "Devolutiva"], ...p.feedback.map(f => [f.item_id, FEEDBACK_KINDS[f.kind], f.message, f.proposal, person(f.author_id), formatDate(f.created_at), latest(f.id) ? REVIEW_DECISIONS[latest(f.id).decision] : "Aguardando análise", latest(f.id)?.message || ""])];
@@ -65,7 +69,7 @@ export function ProcessReviewWorkspace(p: Props) {
         </div>
       </div>
       <nav className={styles.actions} aria-label="Revisão dos processos">
-        <button className={styles.primary} onClick={() => open("suggest")}>Dar opinião</button>
+        <button className={styles.primary} onClick={() => {setItemId(navigation.selectedId);open("suggest");}}>Dar opinião</button>
         <button className={styles.secondary} onClick={() => { setFeedbackItem(null); open("feedback"); }}>{p.manager ? "Sugestões" : "Minhas sugestões"}<span className={styles.count}>{p.feedback.length}</span></button>
         <details className={styles.manage} onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.removeAttribute("open"); event.stopPropagation(); } }}>
           <summary className={styles.secondary}>{p.manager ? "Gerenciar" : "Compartilhar"}<span aria-hidden="true">⌄</span></summary>
@@ -78,15 +82,18 @@ export function ProcessReviewWorkspace(p: Props) {
     </header>
     <UnitNavigation cnes={p.cnes} current="processos"/>
     <nav className={styles.processModes} aria-label="Visualização dos processos">
-      <Link href={`/unidades/${p.cnes}/processos`} aria-current={!p.validation?"page":undefined}>Teia de processos</Link>
-      <Link href={`/unidades/${p.cnes}/processos/validacao`} aria-current={p.validation?"page":undefined}>Validação pelas áreas</Link>
+      <Link href={processHref(p.cnes,false,navigation.hash)} aria-current={!p.validation?"page":undefined}>Teia de processos</Link>
+      <Link href={processHref(p.cnes,true,navigation.hash)} aria-current={p.validation?"page":undefined}>Validação pelas áreas</Link>
     </nav>
 
     {!panel && notice && <p className={`border-b px-4 py-2 text-sm ${noticeError ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`} role="status">{notice}</p>}
-    {p.validation ? <AreaValidationPanel focusItem={p.activityId} {...p.validation} map={p.map} cnes={p.cnes} manager={p.manager} canContribute={p.canContribute} userId={p.userId}
+    {p.validation ? <AreaValidationPanel focusItem={p.activityId} onActivityOpen={navigation.selectActivity} navigationHash={navigation.hash} {...p.validation} map={p.map} cnes={p.cnes} manager={p.manager} canContribute={p.canContribute} userId={p.userId}
       people={p.people.filter(person=>p.members.some(m=>m.active && m.participation==="reviewer" && m.profile_id===person.id))}
       feedback={p.feedback} suggest={(id,k)=>{setItemId(id);setKind(k);open("suggest");}} review={id=>{setFeedbackItem(id);open("feedback");}} manage={()=>open("members")}/>
-      : <iframe ref={frame} src={`/api/processos/${p.map.id}/grafo${p.activityId?"#n="+encodeURIComponent(p.activityId):""}`} title={`Teia de processos · ${p.unitName}`} className={styles.graph} sandbox="allow-scripts allow-same-origin" referrerPolicy="same-origin" />}
+      : <section className={styles.graphRegion} aria-label="Exploração dos processos">
+        {navigation.status!=="ready" && <div className={styles.frameNotice} role="status">{navigation.status==="error"?<><p>O diagrama não respondeu. Tente recarregar ou confira seu acesso.</p><button className={styles.secondary} onClick={navigation.retry}>Recarregar diagrama</button><Link href={processHref(p.cnes,true,navigation.hash)}>Abrir lista de validação</Link></>:"Carregando processos…"}</div>}
+        <iframe key={navigation.attempt} ref={frame} onLoad={navigation.onFrameLoad} src={`/api/processos/${p.map.id}/grafo`} title={`Teia de processos · ${p.unitName}`} className={styles.graph} sandbox="allow-scripts allow-same-origin" referrerPolicy="same-origin" />
+      </section>}
     <dialog ref={dialog} onCancel={() => setPanel(null)} onClose={() => setPanel(null)} className="fixed inset-0 m-auto max-h-[92dvh] w-[min(960px,96vw)] overflow-auto rounded-xl border border-stone-300 bg-[#fcfcfb] p-0 text-ink shadow-2xl backdrop:bg-black/40">
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-white px-5 py-3"><h2 className="font-semibold">{panel === "suggest" ? "Sua opinião sobre este processo" : panel === "feedback" ? p.manager ? "Sugestões da equipe" : "Minhas sugestões e respostas" : "Participantes desta revisão"}</h2><button className={button} onClick={() => setPanel(null)}>Fechar ×</button></div>
       <div className="p-5">{notice && <p role="status" className={`mb-4 rounded-md border p-3 text-sm ${noticeError ? "border-amber-300 bg-amber-50" : "border-green-200 bg-green-50"}`}>{notice}</p>}

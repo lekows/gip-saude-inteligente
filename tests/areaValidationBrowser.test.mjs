@@ -66,7 +66,7 @@ test("area panel links a contribution to its activity and accepts a designated s
       await page.getByText("Nenhum processo corresponde aos filtros.").waitFor();
       await page.getByRole("button",{name:"Limpar filtros"}).click();
       assert.equal(await page.locator("article").count(),1);
-      assert.equal(await page.locator("a").filter({hasText:"Abrir na teia"}).getAttribute("href"),"/unidades/0000001/processos?atividade=M01.A01");
+      assert.equal(await page.locator("a").filter({hasText:"Abrir na teia"}).getAttribute("href"),"/unidades/0000001/processos?atividade=M01.A01#m=M01&n=M01.A01");
       await page.close();
     }
   }finally{await browser.close();}

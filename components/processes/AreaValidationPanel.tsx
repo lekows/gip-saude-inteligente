@@ -7,9 +7,10 @@ import { activityState,macroSignal,detailFields,signalLabel } from "@/lib/proces
 import type {Activity,Details,Ledger,Signal} from "@/lib/processes/areaValidation";
 import type {ProcessActionResult,ProcessFeedback,ProcessMap,ProcessPerson} from "@/types/processReview";
 import s from "./AreaValidationPanel.module.css";
+import {normalizeProcessHash,processHref} from "@/lib/processes/navigation";
 
 export type ValidationData={ledger:Ledger; macros:{id:string;title:string}[]; activities:Activity[]};
-type Props=ValidationData & {focusItem?:string;map:ProcessMap; cnes:string; manager:boolean; userId:string; canContribute:boolean; people:ProcessPerson[]; feedback:ProcessFeedback[];
+type Props=ValidationData & {focusItem?:string;onActivityOpen?:(id:string)=>void;navigationHash?:string;map:ProcessMap; cnes:string; manager:boolean; userId:string; canContribute:boolean; people:ProcessPerson[]; feedback:ProcessFeedback[];
   suggest:(id:string,kind:"understood"|"change"|"new_step")=>void; review:(id:string)=>void; manage:()=>void};
 const symbols={pending:"◐",approved:"✓",correction:"!"};
 function Badge({value}:{value:Signal}){return <span className={s.badge} data-state={value}><b aria-hidden>{symbols[value]}</b>{signalLabel[value]}</span>;}
@@ -50,12 +51,14 @@ function Item({p,item}:{p:Props;item:Activity}){
   const {run,pending,notice}=useAreaAction();
   const feedback=p.feedback.filter(f=>f.item_id===item.id);
   const editable=p.map.status==="open" && p.canContribute;
-  return <details className={s.item} open={item.id===p.focusItem || undefined}><summary><span>{item.title}</span><Badge value={state.signal}/></summary>
+  const context=new URLSearchParams((p.navigationHash||"").replace(/^#/,""));context.set("n",item.id);
+  const diagramHref=processHref(p.cnes,false,normalizeProcessHash("#"+context.toString(),[...p.macros,...p.activities].map(i=>i.id)));
+  return <details className={s.item} open={item.id===p.focusItem || undefined} onToggle={event=>{if(event.currentTarget.open)p.onActivityOpen?.(item.id);}}><summary><span>{item.title}</span><Badge value={state.signal}/></summary>
     <div className={s.body}><p>{state.revision?.details?.routine||item.account}</p>
     {state.revision?.details && <dl>{Object.entries(detailFields).slice(1).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{state.revision?.details?.[key as keyof Details]}</dd></div>)}</dl>}
     <p><b>Próximo passo</b> · {state.next}</p>
     {item.question && <p><b>Pergunta do levantamento</b> · {item.question}</p>}
-    <div className={s.controls}><Link href={`/unidades/${p.cnes}/processos?atividade=${encodeURIComponent(item.id)}`}>Abrir na teia</Link>
+    <div className={s.controls}><Link href={diagramHref}>Abrir na teia</Link>
     {editable && <><button onClick={()=>p.suggest(item.id,"understood")}>Está de acordo com a rotina</button><button onClick={()=>p.suggest(item.id,"change")}>Precisa corrigir</button><button onClick={()=>p.suggest(item.id,"new_step")}>Falta uma informação</button></>}
     {!!feedback.length && <button onClick={()=>p.review(item.id)}>Ver contribuições ({feedback.length})</button>}</div>
     {editable && (p.manager||mine.length>0) && <><DetailForm key={state.lastId} item={item} state={state} p={p} mandate={mine[0]?.mandate??null}/>

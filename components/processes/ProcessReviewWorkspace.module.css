@@ -10,3 +10,5 @@
 .processModes{display:flex;gap:22px;flex:none;padding:8px 28px;border-bottom:1px solid #dce7e3;background:#f5f9f7;font-size:12px}.processModes a{color:#718884;text-decoration:none}.processModes a[aria-current=page]{color:#087f83;font-weight:650}.processModes a:focus-visible{outline:3px solid #33a9a0;outline-offset:2px}
 @media(max-width:760px){.processModes{padding:8px 17px;gap:16px;font-size:11px}}
 @media print{.processModes{display:none}}
+.graphRegion{position:relative;display:flex;flex:1;min-height:0;min-width:0}.frameNotice{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#f6f9f9;padding:24px;text-align:center;font-size:14px}.frameNotice a{color:#087f83;text-decoration:underline}.frameNotice p{max-width:440px;line-height:1.7}
+.processModes a{padding:7px 0;min-height:34px;font-size:13px}.processModes a[aria-current=page]{border-bottom:2px solid #087f83}.subtitle{color:#536c70}.back{color:#536c70}.primary,.secondary{font-size:13px}
