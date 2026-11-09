@@ -14,7 +14,7 @@
     "test:territorial-evidence": "node --experimental-strip-types --test tests/territorialCoveragePriority.test.mjs tests/territorialVulnerability.test.mjs",
     "test": "npm run test:domain && npm run test:security && npm run test:behavioral && npm run test:data-sources && npm run test:territorial-evidence && npm run test:evaluations && npm run test:processes",
     "test:evaluations": "node --experimental-strip-types --test tests/evaluationRules.test.mjs tests/evaluationsDatabase.test.mjs",
-    "test:processes": "node --experimental-strip-types --test tests/processReviewRules.test.mjs tests/processReviewDatabase.test.mjs tests/areaValidation.test.mjs tests/hospitalDemo.test.mjs tests/unitNavigation.test.mjs"
+    "test:processes": "node --experimental-strip-types --test tests/processReviewRules.test.mjs tests/processReviewDatabase.test.mjs tests/areaValidation.test.mjs tests/hospitalDemo.test.mjs tests/unitNavigation.test.mjs tests/processNavigation.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

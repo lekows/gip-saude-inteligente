@@ -9,7 +9,8 @@ export async function UnitProcessWorkspace({ params, validation=false, activity 
   const { cnes } = await params;
   if (!/^\d{7}$/.test(cnes)) notFound();
   const context = await processContext().catch(() => null);
-  if (!context) redirect(`/entrar?next=${encodeURIComponent(`/unidades/${cnes}/processos${validation ? "/validacao" : ""}`)}`);
+  const activityQuery=typeof activity==="string" && /^M\d{2}\.A\d{2}$/.test(activity) ? "?atividade="+encodeURIComponent(activity) : "";
+  if (!context) redirect(`/entrar?next=${encodeURIComponent(`/unidades/${cnes}/processos${validation ? "/validacao" : ""}${activityQuery}`)}`);
   const { supabase, user, manager } = context;
   const { data: unit, error: unitError } = await supabase.from("health_units").select("id,name,cnes").eq("cnes", cnes).eq("active", true).maybeSingle();
   if (unitError) return <Unavailable />;

@@ -30,6 +30,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+      - name: Install application dependencies for middleware integration tests
+        run: npm ci
       - name: Install isolated browser test tools
         run: npm install --prefix "$RUNNER_TEMP/gip-ui" --no-save --ignore-scripts playwright@1.64.1 esbuild@0.25.12 react@19.2.6 react-dom@19.2.6 lucide-react@0.468.0
       - name: Install Chromium
@@ -37,4 +40,4 @@ jobs:
       - name: Exercise process navigation with fictional data and production frame policy
         env:
           PLAYWRIGHT_MODULE_PATH: ${{ runner.temp }}/gip-ui/node_modules/playwright/index.mjs
-        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs tests/areaValidationBrowser.test.mjs tests/hospitalDemoBrowser.test.mjs
+        run: node --experimental-strip-types --test tests/processGraphBrowser.test.mjs tests/areaValidationBrowser.test.mjs tests/hospitalDemoBrowser.test.mjs tests/processWorkspaceBrowser.test.mjs tests/processLoginRedirect.test.mjs

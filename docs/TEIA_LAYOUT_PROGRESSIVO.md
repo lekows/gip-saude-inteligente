@@ -96,3 +96,32 @@ de pessoas distintas ou cobertura pós-operatória.
 Verificação: teste de limites e agenda vazia, reconciliação da composição, cenários
 de computador e celular para filtros, detalhamento, modo reunião, movimento reduzido,
 simulação e download, além da suíte existente, build e audit. Sem mudança de banco.
+
+## Navegação contextual e painel ampliável — 9 de novembro de 2026
+
+A opção escolhida preserva os macroprocessos à esquerda e o detalhe ao lado do
+fluxo. **Ampliar detalhes** ocupa a área central para leitura; **Reduzir detalhes**
+restaura o diagrama. No celular, o detalhe já utiliza toda a largura disponível.
+Fechar ou usar Escape devolve o foco a um controle visível. Os controles cobertos
+pelo detalhe ampliado não recebem foco.
+
+**Fluxo**, **Atividades**, **Perguntas** e **Matrizes** ficam visíveis na navegação.
+Organização em sequência, camadas, teia e apoios adicionais continuam em Mais
+opções. A matriz de perguntas usa o nome **Pendências do levantamento**, para não
+confundir perguntas acadêmicas com validações formais das áreas.
+
+O nome do macroprocesso abre seu percurso; a seta ao lado somente mostra ou
+recolhe suas atividades. Compartilhar copia a visualização atual, incluindo
+processo, atividade, modo, organização e ampliação. A troca entre teia e
+validação conserva a atividade; a seleção na lista de validação também atualiza
+o link. O login preserva somente o parâmetro de atividade expressamente permitido,
+sem aceitar destinos externos ou parâmetros arbitrários.
+
+A sincronização entre frame e página verifica origem, emissor e IDs conhecidos.
+Ela mantém o frame montado durante cliques e cobre sua carga antes da hidratação
+da página. Um aviso de recuperação oferece recarga e acesso à lista se não
+houver resposta. Os testes exercitam o componente real com serviços externos
+isolados e dados fictícios, sem consultar pacientes nem alterar permissões.
+
+Homologação com a conta real continua necessária para demonstrar o envio de
+sugestões e a assinatura de representantes no ambiente publicado.

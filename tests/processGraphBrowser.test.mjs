@@ -36,15 +36,63 @@ async function scenario(fn, viewport = { width: 1600, height: 1050 }) {
   try { await fn(frame, page); assert.deepEqual(errors, [], 'No runtime exceptions'); }
   finally { await context.close(); }
 }
-async function option(f, selector) { await f.locator('#advanced > summary').click(); await f.locator(selector).click(); }
+async function option(f, selector) {
+  const target=f.locator(selector);
+  if(!await target.isVisible()) {
+    if(await target.evaluate(el=>!!el.closest('#matrices'))) await f.locator('#matrices > summary').click();
+    else await f.locator('#advanced > summary').click();
+  }
+  await target.click();
+}
 async function close(f) { await f.getByRole('button', { name: 'Fechar detalhes', exact: true }).click(); }
 async function title(f, text) { await f.waitForFunction(t => document.querySelector('#scopeHeading')?.textContent === t, text); assert.equal(await f.locator('#scopeHeading').textContent(), text); }
+test('details can expand, shrink and close without losing activity or keyboard focus', () => scenario(async f => {
+  await f.locator('#lista [data-open-macro="M04"]').click();
+  await f.locator('#lista [data-activity="M04.A02"]').click();
+  const panel=f.locator('#painel'), compact=await panel.boundingBox();
+  await f.getByRole('button',{name:'Ampliar detalhes',exact:true}).click();
+  assert((await panel.boundingBox()).width>compact.width+100);
+  assert.equal(await f.locator('#painel h2').textContent(),'Atividade fictícia 4.2');
+  assert(f.url().includes('wide=1'));
+  await f.getByRole('button',{name:'Reduzir detalhes',exact:true}).click();
+  assert(!f.url().includes('wide=1'));
+  await close(f);
+  assert.equal(await panel.isVisible(),false);
+  assert.equal(await f.locator('#lista [data-activity="M04.A02"]').evaluate(el=>el===document.activeElement),true);
+}));
+
+test('primary views are discoverable and the sidebar can collapse without resetting the activity', () => scenario(async f => {
+  await f.locator('#lista [data-open-macro="M04"]').click();
+  await f.locator('#lista [data-activity="M04.A02"]').click(); await close(f);
+  await f.locator('#lista [data-toggle-macro="M04"]').click();
+  assert.equal(await f.locator('#lista .grupo[data-open=true]').count(),0);
+  assert.equal(await f.locator('#scopeHeading').textContent(),'Processo fictício 4');
+  await f.getByRole('button',{name:'Abrir processo Processo fictício 4',exact:true}).click();
+  assert.equal(await f.locator('#lista .grupo[data-open=true]').count(),1);
+  await f.locator('#viewModes [data-v="tabela"]').click();
+  assert.equal(await f.locator('#tabela .activity-card').count(),6);
+  await f.locator('#viewModes [data-v="grafo"]').click();
+  assert(await f.locator('#cy').isVisible());
+}));
+
+test('navigation reports the selected activity and view to its parent and restores a shared context', () => scenario(async (f,page) => {
+  await f.locator('#lista [data-open-macro="M04"]').click();
+  await f.locator('#lista [data-activity="M04.A02"]').click();
+  await page.waitForFunction(()=>document.querySelector('output').textContent.includes('gip-process-navigation'));
+  const message=JSON.parse(await page.locator('#feedback').textContent());
+  assert.equal(message.type,'gip-process-navigation');
+  assert.equal(new URLSearchParams(message.hash.slice(1)).get('n'),'M04.A02');
+  await f.getByRole('button',{name:'Ampliar detalhes',exact:true}).click();
+  await f.goto(f.url());
+  assert.equal(await f.locator('#painel h2').textContent(),'Atividade fictícia 4.2');
+  assert(await f.getByRole('button',{name:'Reduzir detalhes',exact:true}).isVisible());
+}));
 
 test('every macro opens from sidebar and graph, then every activity opens full progressive details', { timeout: 60000 }, () => scenario(async f => {
   assert.equal(await f.locator('#graph .macro').count(), 5);
   assert((await f.locator('#cy').boundingBox()).height > 300, 'Desktop map has usable height');
   for (const m of data.macros) {
-    await f.locator(`#lista summary[data-macro="${m.id}"]`).click(); await title(f, m.title);
+    await f.locator(`#lista [data-open-macro="${m.id}"]`).click(); await title(f, m.title);
     assert.equal(await f.locator('#graph .atividade').count(), data.activities.filter(a => a.macro === m.id).length);
     await f.locator('#aboutProcess').click();
     assert.equal(await f.locator('#painel h2').textContent(), m.title);
@@ -68,7 +116,7 @@ test('every macro opens from sidebar and graph, then every activity opens full p
 }));
 
 test('list, questions and both full matrices filter, clear and open contextual details', () => scenario(async f => {
-  await f.locator('#lista summary[data-macro="M04"]').click();
+  await f.locator('#lista [data-open-macro="M04"]').click();
   for (const [view, selector, count] of [['tabela', '.activity-card', 6], ['matriz', 'tbody tr', 6], ['perguntas', '.activity-card', 8], ['validacao', 'tbody tr', 8]]) {
     await option(f, `[data-v="${view}"]`);
     assert.equal(await f.locator(`#tabela ${selector}`).count(), count);
@@ -88,7 +136,7 @@ test('sequence, layers and web change positions; every layer and decision opens 
   const transforms = [];
   for (const layout of ['fluxo', 'camadas', 'teia']) { await option(f, `[data-l="${layout}"]`); transforms.push(await f.locator('#graph .node').evaluateAll(ns => ns.map(n => n.getAttribute('transform')).join('|'))); }
   assert.equal(new Set(transforms).size, 3, 'Overview layouts differ');
-  await f.locator('#lista summary[data-macro="M04"]').click();
+  await f.locator('#lista [data-open-macro="M04"]').click();
   const scopedTransforms = [];
   for (const layout of ['fluxo', 'camadas', 'teia']) { await option(f, `[data-l="${layout}"]`); scopedTransforms.push(await f.locator('#graph .atividade').evaluateAll(ns => ns.map(n => n.getAttribute('transform')).join('|'))); }
   assert.equal(new Set(scopedTransforms).size, 3, 'Process layouts differ');
@@ -118,7 +166,7 @@ test('search across scopes, edge handoffs, sources and contextual feedback bridg
 }));
 
 test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigation usable', () => scenario(async (f, page) => {
-  await f.locator('#lista summary[data-macro="M04"]').click();
+  await f.locator('#lista [data-open-macro="M04"]').click();
   await f.locator('#meeting').click(); assert.equal(await f.locator('#walklabel').textContent(), 'Atividade 1 de 6');
   await f.locator('#next').click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.2');
   await f.locator('#prev').click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.1');
@@ -134,7 +182,7 @@ test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigatio
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 45, box.y + box.height / 2 + 35, { steps: 5 }); await page.mouse.up();
   assert.notEqual(await node.getAttribute('transform'), before); assert.equal(await f.locator('#painel').isVisible(), false);
   await node.click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.1'); await close(f);
-  await f.locator('#lista summary[data-macro="M05"]').click(); await title(f, 'Processo fictício 5');
+  await f.locator('#lista [data-open-macro="M05"]').click(); await title(f, 'Processo fictício 5');
   // Same-document history belongs to the iframe; there is no top-level load to wait for.
   await page.evaluate(() => history.back()); await title(f, 'Processo fictício 4');
   await page.evaluate(() => history.forward()); await title(f, 'Processo fictício 5');
@@ -152,8 +200,9 @@ test('mobile: area cards, list details, close, sidebar, matrices and map without
   await f.locator('#tabela .activity-card').nth(3).click(); assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.4'); await close(f);
   await f.locator('#alt-lista').click(); await f.locator('#lista [data-activity="M04.A02"]').click();
   assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.2'); assert.equal(await f.locator('#lista').isVisible(), false); await close(f);
+  assert.equal(await f.locator('#scopeHeading').evaluate(el=>el===document.activeElement),true,'Closing mobile sidebar details restores visible focus');
   await f.locator('#alt-lista').click(); assert.equal(await f.locator('#alt-lista').getAttribute('aria-expanded'), 'true');
-  await f.locator('#lista summary[data-macro="M03"]').click(); await title(f, 'Processo fictício 3'); assert.equal(await f.locator('#lista').isVisible(), false);
+  await f.locator('#lista [data-open-macro="M03"]').click(); await title(f, 'Processo fictício 3'); assert.equal(await f.locator('#lista').isVisible(), false);
   await option(f, '[data-v="matriz"]'); assert.equal(await f.locator('#tabela tbody tr').count(), 4); await f.locator('#tabela button').first().click(); await close(f);
   await f.locator('#switchView').click(); assert(await f.locator('#cy').isVisible());
   assert.equal(await f.locator('html').evaluate(el => el.scrollWidth > innerWidth), false);
