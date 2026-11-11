@@ -231,6 +231,8 @@ test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigatio
   await f.locator('#graph [data-id="M04.A02"]').focus(); await f.locator('#graph [data-id="M04.A02"]').press(' ');
   assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.2'); await f.locator('#painel h2').press('Escape');
   assert.equal(await f.locator('#painel').isVisible(), false);
+  // Establish the reading view after the details panel has changed the available canvas.
+  await f.locator('#ajustar').click();
   const initial = await f.locator('#graph').getAttribute('viewBox'); await f.locator('#zplus').click(); assert.notEqual(await f.locator('#graph').getAttribute('viewBox'), initial);
   await f.locator('#zminus').click(); await f.locator('#ajustar').click(); assert.equal(await f.locator('#graph').getAttribute('viewBox'), initial);
   const node = f.locator('#graph [data-id="M04.A01"]'), before = await node.getAttribute('transform'), box = await node.boundingBox();
