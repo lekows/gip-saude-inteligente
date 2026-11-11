@@ -61,7 +61,10 @@ test("process review enforces scoped access, authorship, versioning and immutabl
   for(const name of migrations){const sql=(await readFile(new URL(name,directory),"utf8")).replace(/^\s*create extension if not exists pgcrypto\s*;\s*$/gim,"");await db.exec(sql);}
   if(process.env.GIP_PROCESS_SQL)await db.exec(await readFile(process.env.GIP_PROCESS_SQL,"utf8"));
   assert.equal((await db.query("select count(*)::int as total from pg_tables where schemaname='public' and tablename in ('process_maps','process_review_members','process_feedback','process_feedback_reviews')")).rows[0].total,4);
-  await db.exec(await readFile(new URL("../supabase/tests/process_review.sql",import.meta.url),"utf8"));
+  const editorialTests=await readFile(new URL("../supabase/tests/process_editorial.sql",import.meta.url),"utf8");
+  const suite=(await readFile(new URL("../supabase/tests/process_review.sql",import.meta.url),"utf8")).replace(
+    "do $$ begin for i in 1..29 loop",()=>editorialTests+"\ndo $$ begin for i in 1..29 loop");
+  await db.exec(suite);
   assert.equal((await db.query("select count(*)::int as total from auth.users")).rows[0].total,0,"fixtures rolled back");
   t.diagnostic("Actual SQL policies, direct table attacks, feedback replay, cross-unit isolation, revocation, closure, coordination conflict and history verified.");
  }finally{await db.close();}

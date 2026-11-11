@@ -13,7 +13,8 @@ export type Details = Record<keyof typeof detailFields,string>;
 export type Assignment = {macro_id:string; area:string; assignee:string; assignee_name:string; active:boolean; mandate:string};
 export type AreaEvent = {id:number; item_id:string; kind:"revision"|"reopen"|"approved"|"correction"; actor_name:string; area:string|null; mandate:string|null; note:string; details:Details|null; created_at:string};
 export type Ledger = {assignments:Assignment[]; events:AreaEvent[]};
-export type Activity = {id:string; macro:string; title:string; account:string; question:string; owner:string; records:string; area:string};
+export type Activity = {id:string; macro:string; title:string; account:string; question:string; owner:string; records:string; area:string;
+ editorialDetails?:Details;editorial?:{decision:"accepted"|"needs_information";source_author_name:string;note:string}};
 export function activityState(item: Pick<Activity,"id"|"macro">, ledger:Ledger) {
   const history=ledger.events.filter(e=>e.item_id===item.id).sort((a,b)=>b.id-a.id);
   const revision=history.find(e=>e.kind==="revision");

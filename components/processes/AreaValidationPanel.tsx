@@ -35,7 +35,7 @@ function Representatives({p,macro}:{p:Props;macro:string}){
 }
 function DetailForm({item,state,p,mandate}:{item:Activity;state:ReturnType<typeof activityState>;p:Props;mandate:string|null}){
   const {run,pending,notice}=useAreaAction();
-  const initial=state.revision?.details ?? {routine:item.account,owner:"",records:item.records,handoff:"",rules:""};
+  const initial=state.revision?.details ?? item.editorialDetails ?? {routine:item.account,owner:"",records:item.records,handoff:"",rules:""};
   return <details className={s.form}><summary>{state.revision?"Revisar detalhes da rotina":"Completar detalhes da rotina"}</summary>
     <form onSubmit={ev=>{ev.preventDefault();const data=new FormData(ev.currentTarget);
       const details=Object.fromEntries(Object.keys(detailFields).map(key=>[key,String(data.get(key)).trim()])) as Details;
@@ -54,8 +54,8 @@ function Item({p,item}:{p:Props;item:Activity}){
   const context=new URLSearchParams((p.navigationHash||"").replace(/^#/,""));context.set("n",item.id);
   const diagramHref=processHref(p.cnes,false,normalizeProcessHash("#"+context.toString(),[...p.macros,...p.activities].map(i=>i.id)));
   return <details className={s.item} open={item.id===p.focusItem || undefined} onToggle={event=>{if(event.currentTarget.open)p.onActivityOpen?.(item.id);}}><summary><span>{item.title}</span><Badge value={state.signal}/></summary>
-    <div className={s.body}><p>{state.revision?.details?.routine||item.account}</p>
-    {state.revision?.details && <dl>{Object.entries(detailFields).slice(1).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{state.revision?.details?.[key as keyof Details]}</dd></div>)}</dl>}
+    <div className={s.body}>{item.editorial&&<aside className="rounded-md border border-teal-200 bg-teal-50 p-3 text-sm"><b>{item.editorial.decision==="accepted"?"Texto consolidado com as contribuições":"Esclarecimento pendente"}</b><p>{item.editorial.note}</p><p>Contribuição de {item.editorial.source_author_name}. A consolidação assistida não equivale à validação da área.</p></aside>}<p>{state.revision?.details?.routine||item.account}</p>
+    {(state.revision?.details??item.editorialDetails) && <dl>{Object.entries(detailFields).slice(1).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{(state.revision?.details??item.editorialDetails)?.[key as keyof Details]}</dd></div>)}</dl>}
     <p><b>Próximo passo</b> · {state.next}</p>
     {item.question && <p><b>Pergunta do levantamento</b> · {item.question}</p>}
     <div className={s.controls}><Link href={diagramHref}>Abrir na teia</Link>

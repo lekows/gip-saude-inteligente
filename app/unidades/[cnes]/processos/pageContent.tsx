@@ -5,6 +5,8 @@ import { ProcessReviewWorkspace } from "@/components/processes/ProcessReviewWork
 import type { ProcessContent, ProcessFeedback, ProcessFeedbackReview, ProcessMap, ProcessMember, ProcessPerson } from "@/types/processReview";
 import { readAreaLedger } from "@/lib/processes/areaLedger";
 import type { Activity } from "@/lib/processes/areaValidation";
+import {readEditorialLedger} from "@/lib/processes/editorialLedger";
+import {applyEditorialContent} from "@/lib/processes/editorial";
 export async function UnitProcessWorkspace({ params, validation=false, activity }: { params: Promise<{ cnes: string }>; validation?:boolean; activity?:string }) {
   const { cnes } = await params;
   if (!/^\d{7}$/.test(cnes)) notFound();
@@ -28,16 +30,20 @@ export async function UnitProcessWorkspace({ params, validation=false, activity 
   const ids = (feedback.data || []).map(x => x.id);
   const reviews = ids.length ? await supabase.from("process_feedback_reviews").select("id,feedback_id,revision,decision,message,reviewer_id,created_at").in("feedback_id", ids).order("revision", { ascending: false }).limit(1500) : { data: [], error: null };
   if (reviews.error) return <Unavailable />;
-  const content = map.content;
+  const [editorial,ledger]=await Promise.all([
+    readEditorialLedger(supabase,map.id).catch(()=>null),
+    readAreaLedger(supabase,map.id).catch(()=>null),
+  ]);
+  if(!editorial||!ledger)return <Unavailable />;
+  const content=applyEditorialContent(map.content,editorial,map.version,ledger);
   const items = [{ id: "__map__", title: "Visão geral da teia" }, ...content.macros, ...content.activities, ...content.questions, ...content.systems, ...content.sources, ...(content.decisionNodes || []), ...content.activities.flatMap(a => [{ id: `R.${a.id}`, title: `Risco potencial · ${a.title}` }, { id: `P.${a.id}`, title: `Melhoria proposta · ${a.title}` }])].map(x => ({ id: x.id, title: x.title }));
   const { content: _content, ...metadata } = map;
-  const ledger = validation ? await readAreaLedger(supabase,map.id).catch(()=>null) : null;
   if (validation && !ledger) return <Unavailable text="Não foi possível carregar as validações. Tente novamente." />;
   const activityId = content.activities.find(a=>a.id===activity)?.id;
-  const validationData = ledger ? {
+  const validationData = validation ? {
     ledger, macros:content.macros.map(({id,title})=>({id,title})),
-    activities:content.activities.map(a=>({id:a.id,title:a.title,macro:String(a.macro||""),account:String(a.account||""),area:String(a.area||""),records:String(a.records||""),owner:String(a.owner||""),question:String(a.question||"")} satisfies Activity)),
+    activities:content.activities.map(a=>({editorialDetails:a.editorialDetails as Activity["editorialDetails"],editorial:a.editorial as Activity["editorial"],id:a.id,title:a.title,macro:String(a.macro||""),account:String(a.account||""),area:String(a.area||""),records:String(a.records||""),owner:String(a.owner||""),question:String(a.question||"")} satisfies Activity)),
   } : null;
-  return <ProcessReviewWorkspace activityId={activityId} validation={validationData} map={metadata} unitName={unit.name} cnes={cnes} userId={user.id} manager={manager} canContribute={manager || members.data?.some(m => m.profile_id === user.id && m.active && m.participation === "reviewer") === true} items={items} feedback={(feedback.data || []) as ProcessFeedback[]} reviews={(reviews.data || []) as ProcessFeedbackReview[]} members={(members.data || []) as ProcessMember[]} people={(people.data || []) as ProcessPerson[]} />;
+  return <ProcessReviewWorkspace editorial={editorial} activityId={activityId} validation={validationData} map={metadata} unitName={unit.name} cnes={cnes} userId={user.id} manager={manager} canContribute={manager || members.data?.some(m => m.profile_id === user.id && m.active && m.participation === "reviewer") === true} items={items} feedback={(feedback.data || []) as ProcessFeedback[]} reviews={(reviews.data || []) as ProcessFeedbackReview[]} members={(members.data || []) as ProcessMember[]} people={(people.data || []) as ProcessPerson[]} />;
 }
 function Unavailable({ text = "O módulo está temporariamente indisponível. Tente novamente mais tarde." }: { text?: string }) { return <main className="mx-auto max-w-3xl px-5 py-12"><h1 className="text-2xl font-semibold">Processos da unidade</h1><p className="mt-4 rounded-lg border bg-white p-5" role="status">{text}</p><Link href="/processos" className="mt-5 inline-block text-folha underline">Voltar aos processos disponíveis</Link></main>; }

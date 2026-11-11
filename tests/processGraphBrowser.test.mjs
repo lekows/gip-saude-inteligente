@@ -5,10 +5,17 @@ import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { processGraphFixture } from './fixtures/processGraphFixture.mjs';
 import { PROCESS_GRAPH_HTML } from '../lib/processes/graph-template.ts';
+import {applyEditorialContent} from '../lib/processes/editorial.ts';
 
 // A real, isolated Chromium in CI. No Supabase, login, production requests or real data.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE_PATH).href);
-const data = processGraphFixture();
+const baseline=processGraphFixture();
+baseline.flows.scoped.M01.base.edges.push({id:"fictional-return",from:"M01.A02",to:"M01.A01",kind:"excecao",label:"Conferir novamente",basis:"Exceção fictícia",source:"Fonte fictícia",inferred:true});
+const data=applyEditorialContent(baseline,[{id:1,map_version:1,item_id:"M01.A01",source_feedback_id:"fictional-source",
+ source_author_name:"Colaboradora fictícia",decision:"accepted",
+ details:{routine:"Rotina fictícia consolidada",owner:"Equipe de teste",records:"Registro de teste",handoff:"Entrega fictícia rastreável",rules:"Exceção ainda a esclarecer"},
+ pending_question:"Quem confirma a etapa fictícia?",proposed_improvement:"Proposta fictícia de piloto",note:"Esclarecimento incorporado; proposta permanece em avaliação.",
+ created_at:"2026-01-01",request_reference:"fictional-batch",diagram:baseline.flows.scoped.M01}],1);
 const routeSource = readFileSync(new URL('../app/api/processos/[id]/grafo/route.ts', import.meta.url), 'utf8');
 const csp = routeSource.match(/"Content-Security-Policy":\s*`([^`]+)`/)[1].replaceAll('${nonce}', 'test-nonce');
 const template = process.env.PROCESS_GRAPH_BASELINE ? readFileSync(process.env.PROCESS_GRAPH_BASELINE, 'utf8') : PROCESS_GRAPH_HTML;
@@ -45,6 +52,23 @@ async function option(f, selector) {
   await target.click();
 }
 async function close(f) { await f.getByRole('button', { name: 'Fechar detalhes', exact: true }).click(); }
+test('return arrows and their labels separate from the forward handoff',()=>scenario(async f=>{
+ await f.locator('#lista [data-open-macro="M01"]').click();
+ const forward=Number(await f.locator('[data-edge="M01.A01|M01.A02|fluxo"] .elabel').getAttribute('y'));
+ const back=Number(await f.locator('[data-edge="fictional-return"] .elabel').getAttribute('y'));
+ assert(Math.abs(back-forward)>=60,"Return-path labels must not overlap the forward label");
+}));
+test('editorial sources and decision branches are accessible without advanced options',()=>scenario(async f=>{
+ await f.locator('#lista [data-open-macro="M01"]').click();
+ await f.getByRole('button',{name:'Ver decisões',exact:true}).click();
+ assert.equal(await f.locator('#graph .decisao').count(),1);
+ assert.equal(await f.getByRole('button',{name:'Ocultar decisões',exact:true}).getAttribute('aria-pressed'),'true');
+ await f.locator('#lista [data-activity="M01.A01"]').click();
+ assert(await f.locator('#painel').getByText('Acolhida na consolidação editorial',{exact:true}).isVisible());
+ assert(await f.locator('#painel').getByText(/Colaboradora fictícia/).isVisible());
+ await f.locator('#painel').getByText('Passagens e exceções esclarecidas',{exact:true}).click();
+ assert(await f.locator('#painel').getByText('Entrega fictícia rastreável',{exact:true}).isVisible());
+}));
 async function title(f, text) { await f.waitForFunction(t => document.querySelector('#scopeHeading')?.textContent === t, text); assert.equal(await f.locator('#scopeHeading').textContent(), text); }
 test('details can expand, shrink and close without losing activity or keyboard focus', () => scenario(async f => {
   await f.locator('#lista [data-open-macro="M04"]').click();
@@ -101,10 +125,10 @@ test('every macro opens from sidebar and graph, then every activity opens full p
       await f.locator(`#graph [data-id="${a.id}"]`).click();
       assert.equal(await f.locator('#painel h2').textContent(), a.title);
       assert((await f.locator('#painel .detail-lead').textContent()).includes(a.account));
-      assert.equal(await f.locator('#painel .detail-section').count(), 5);
-      await f.locator('#painel .detail-section > summary').nth(0).click();
-      assert.equal(await f.locator('#painel .campo dd').nth(0).textContent(), a.area);
-      await f.locator('#painel .detail-section > summary').nth(2).click();
+      assert.equal(await f.locator('#painel .detail-section').count(), a.editorialDetails?6:5);
+      await f.getByText('Quem participa e quais registros utiliza',{exact:true}).click();
+      assert.equal(await f.locator('#painel .detail-section').filter({hasText:'Quem participa e quais registros utiliza'}).locator('.campo dd').first().textContent(), a.area);
+      await f.getByText('Dificuldades e ideias de melhoria',{exact:true}).click();
       assert((await f.locator('#painel').textContent()).includes(a.proposal)); await close(f);
       await f.locator(`#lista [data-activity="${a.id}"]`).click();
       assert.equal(await f.locator('#painel h2').textContent(), a.title); await close(f);
