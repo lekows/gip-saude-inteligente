@@ -5,10 +5,17 @@ import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { processGraphFixture } from './fixtures/processGraphFixture.mjs';
 import { PROCESS_GRAPH_HTML } from '../lib/processes/graph-template.ts';
+import {applyEditorialContent} from '../lib/processes/editorial.ts';
 
 // A real, isolated Chromium in CI. No Supabase, login, production requests or real data.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE_PATH).href);
-const data = processGraphFixture();
+const baseline=processGraphFixture();
+baseline.flows.scoped.M01.base.edges.push({id:"fictional-return",from:"M01.A02",to:"M01.A01",kind:"excecao",label:"Conferir novamente",basis:"Exceção fictícia",source:"Fonte fictícia",inferred:true});
+const data=applyEditorialContent(baseline,[{id:1,map_version:1,item_id:"M01.A01",source_feedback_id:"fictional-source",
+ source_author_name:"Colaboradora fictícia",decision:"accepted",
+ details:{routine:"Rotina fictícia consolidada",owner:"Equipe de teste",records:"Registro de teste",handoff:"Entrega fictícia rastreável",rules:"Exceção ainda a esclarecer"},
+ pending_question:"Quem confirma a etapa fictícia?",proposed_improvement:"Proposta fictícia de piloto",note:"Esclarecimento incorporado; proposta permanece em avaliação.",
+ created_at:"2026-01-01",request_reference:"fictional-batch",diagram:baseline.flows.scoped.M01}],1);
 const routeSource = readFileSync(new URL('../app/api/processos/[id]/grafo/route.ts', import.meta.url), 'utf8');
 const csp = routeSource.match(/"Content-Security-Policy":\s*`([^`]+)`/)[1].replaceAll('${nonce}', 'test-nonce');
 const template = process.env.PROCESS_GRAPH_BASELINE ? readFileSync(process.env.PROCESS_GRAPH_BASELINE, 'utf8') : PROCESS_GRAPH_HTML;
@@ -45,6 +52,54 @@ async function option(f, selector) {
   await target.click();
 }
 async function close(f) { await f.getByRole('button', { name: 'Fechar detalhes', exact: true }).click(); }
+for(const viewport of [{width:1366,height:500},{width:390,height:560}])test('processes open at a readable size in '+viewport.width+'px',()=>scenario(async(f,page)=>{
+ if(viewport.width<=760)await f.evaluate(()=>{D.macros.find(m=>m.id==="M04").title="AcompanhamentoInterdepartamentalFictício de solicitações";});
+ if(viewport.width<=760)await f.locator('#overviewCards [data-scope="M04"]').click();
+ else await f.locator('#lista [data-open-macro="M04"]').click();
+ if(viewport.width<=760)await f.locator('#switchView').click();
+ const font=()=>f.locator('#graph .atividade text.title').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)*el.getScreenCTM().a);
+ assert(await font()>=13,'Opening a process must not shrink text to fit distant steps');
+ assert.equal(await f.locator('html').evaluate(el=>el.scrollWidth>innerWidth),false,'Short screens must not gain horizontal page overflow');
+ assert(await f.locator('#graph').evaluate(el=>el.getBoundingClientRect().right<=innerWidth+1),'The canvas must fit the screen even for long process names');
+ await f.getByRole('button',{name:'Mapa inteiro',exact:true}).click();
+ const boxes=await f.locator('#graph .atividade').evaluateAll(nodes=>{const r=document.querySelector('#graph').getBoundingClientRect();return nodes.every(n=>{const b=n.getBoundingClientRect();return b.left>=r.left-2&&b.right<=r.right+2&&b.top>=r.top-2&&b.bottom<=r.bottom+2;});});
+ assert(boxes,'Whole-map mode keeps all steps in view');
+ await f.getByRole('button',{name:'Ler etapas',exact:true}).click();
+ assert(await font()>=13,'Reading mode restores legible text');
+ if(viewport.width>760){
+  await page.setViewportSize({width:1024,height:480});
+  await f.waitForFunction(()=>{const t=document.querySelector('#graph .atividade text.title');return parseFloat(getComputedStyle(t).fontSize)*t.getScreenCTM().a>=13;});
+ }
+ const actual=await f.locator('#graph').evaluate(el=>el.getScreenCTM().a*100);
+ const displayed=parseInt(await f.locator('#zoomValue').textContent());
+ assert(Math.abs(actual-displayed)<=1,'Zoom percentage reports the real display scale');
+},viewport));
+test('switching mobile processes resets a manually moved camera even when the new process opens as a list',()=>scenario(async f=>{
+ await f.locator('#overviewCards [data-scope="M04"]').click();await f.locator('#switchView').click();
+ await f.locator('#alt-lista').click();await f.locator('#lista [data-activity="M04.A06"]').click();
+ await close(f);await f.locator('#zplus').click();
+ await f.locator('#alt-lista').click();await f.locator('#lista [data-open-macro="M01"]').click();
+ await f.locator('#switchView').click();
+ await f.waitForFunction(()=>{const n=document.querySelector('#graph [data-id="M01.A01"]'),r=document.querySelector('#graph').getBoundingClientRect(),b=n.getBoundingClientRect();return b.right>r.left&&b.left<r.right&&b.bottom>r.top&&b.top<r.bottom;});
+ assert.equal(await f.locator('#ajustar').getAttribute('aria-pressed'),'true');
+}, {width:390,height:560}));
+test('return arrows and their labels separate from the forward handoff',()=>scenario(async f=>{
+ await f.locator('#lista [data-open-macro="M01"]').click();
+ const forward=Number(await f.locator('[data-edge="M01.A01|M01.A02|fluxo"] .elabel').getAttribute('y'));
+ const back=Number(await f.locator('[data-edge="fictional-return"] .elabel').getAttribute('y'));
+ assert(Math.abs(back-forward)>=60,"Return-path labels must not overlap the forward label");
+}));
+test('editorial sources and decision branches are accessible without advanced options',()=>scenario(async f=>{
+ await f.locator('#lista [data-open-macro="M01"]').click();
+ await f.getByRole('button',{name:'Ver decisões',exact:true}).click();
+ assert.equal(await f.locator('#graph .decisao').count(),1);
+ assert.equal(await f.getByRole('button',{name:'Ocultar decisões',exact:true}).getAttribute('aria-pressed'),'true');
+ await f.locator('#lista [data-activity="M01.A01"]').click();
+ assert(await f.locator('#painel').getByText('Acolhida na consolidação editorial',{exact:true}).isVisible());
+ assert(await f.locator('#painel').getByText(/Colaboradora fictícia/).isVisible());
+ await f.locator('#painel').getByText('Passagens e exceções esclarecidas',{exact:true}).click();
+ assert(await f.locator('#painel').getByText('Entrega fictícia rastreável',{exact:true}).isVisible());
+}));
 async function title(f, text) { await f.waitForFunction(t => document.querySelector('#scopeHeading')?.textContent === t, text); assert.equal(await f.locator('#scopeHeading').textContent(), text); }
 test('details can expand, shrink and close without losing activity or keyboard focus', () => scenario(async f => {
   await f.locator('#lista [data-open-macro="M04"]').click();
@@ -101,10 +156,10 @@ test('every macro opens from sidebar and graph, then every activity opens full p
       await f.locator(`#graph [data-id="${a.id}"]`).click();
       assert.equal(await f.locator('#painel h2').textContent(), a.title);
       assert((await f.locator('#painel .detail-lead').textContent()).includes(a.account));
-      assert.equal(await f.locator('#painel .detail-section').count(), 5);
-      await f.locator('#painel .detail-section > summary').nth(0).click();
-      assert.equal(await f.locator('#painel .campo dd').nth(0).textContent(), a.area);
-      await f.locator('#painel .detail-section > summary').nth(2).click();
+      assert.equal(await f.locator('#painel .detail-section').count(), a.editorialDetails?6:5);
+      await f.getByText('Quem participa e quais registros utiliza',{exact:true}).click();
+      assert.equal(await f.locator('#painel .detail-section').filter({hasText:'Quem participa e quais registros utiliza'}).locator('.campo dd').first().textContent(), a.area);
+      await f.getByText('Dificuldades e ideias de melhoria',{exact:true}).click();
       assert((await f.locator('#painel').textContent()).includes(a.proposal)); await close(f);
       await f.locator(`#lista [data-activity="${a.id}"]`).click();
       assert.equal(await f.locator('#painel h2').textContent(), a.title); await close(f);
@@ -176,6 +231,8 @@ test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigatio
   await f.locator('#graph [data-id="M04.A02"]').focus(); await f.locator('#graph [data-id="M04.A02"]').press(' ');
   assert.equal(await f.locator('#painel h2').textContent(), 'Atividade fictícia 4.2'); await f.locator('#painel h2').press('Escape');
   assert.equal(await f.locator('#painel').isVisible(), false);
+  // Establish the reading view after the details panel has changed the available canvas.
+  await f.locator('#ajustar').click();
   const initial = await f.locator('#graph').getAttribute('viewBox'); await f.locator('#zplus').click(); assert.notEqual(await f.locator('#graph').getAttribute('viewBox'), initial);
   await f.locator('#zminus').click(); await f.locator('#ajustar').click(); assert.equal(await f.locator('#graph').getAttribute('viewBox'), initial);
   const node = f.locator('#graph [data-id="M04.A01"]'), before = await node.getAttribute('transform'), box = await node.boundingBox();

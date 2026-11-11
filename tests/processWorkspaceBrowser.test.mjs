@@ -41,7 +41,9 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
   await page.goto("https://hospital.test/unidades/0000001/processos");
   const fixture={map:{id:"fixture",version:1,status:"open"},unitName:"Hospital fictício",cnes:"0000001",userId:"rep",manager:false,canContribute:true,
    items:[{id:"__map__",title:"Visão geral"},...data.macros,...data.activities,...data.questions].map(({id,title})=>({id,title})),
-   feedback:[],reviews:[],members:[],people:[],validation:null};
+   feedback:[{id:"comment",author_id:"rep",item_id:"M01.A01",map_version:1,kind:"question",message:"Pergunta fictícia de origem",proposal:"",created_at:"2026-01-01"}],
+   editorial:[{id:1,map_version:1,source_feedback_id:"comment",item_id:"M01.A01",decision:"accepted",source_author_name:"Colaboradora fictícia",note:"Descrição aprimorada com autoria preservada.",created_at:"2026-01-02"}],
+   reviews:[],members:[],people:[],validation:null};
   const mount=async()=>{
   const url=new URL(page.url()),validation=url.pathname.endsWith("/validacao");
   await page.evaluate(p=>{
@@ -52,6 +54,11 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
   await page.addStyleTag({content:css});await page.addScriptTag({content:js});
   };
   await mount();
+  await page.getByRole("button",{name:/Minhas sugestões/}).click();
+  assert(await page.locator("dialog").getByText("Acolhida na consolidação editorial",{exact:true}).isVisible());
+  assert(await page.locator("dialog").getByText("Descrição aprimorada com autoria preservada.",{exact:true}).isVisible());
+  assert.equal(await page.locator("dialog").getByText("Aguardando análise",{exact:true}).count(),0);
+  await page.getByRole("button",{name:/Fechar/}).click();
   const frame=page.frameLocator("iframe");
   await frame.locator('#graph .macro').first().waitFor({state:"attached"});
   if(width===390)await frame.locator('#overviewCards [data-scope="M04"]').click();
