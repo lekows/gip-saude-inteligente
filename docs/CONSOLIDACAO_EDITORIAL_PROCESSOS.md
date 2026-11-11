@@ -26,6 +26,8 @@ O código público contém somente implementação e testes sintéticos. As desc
 
 O botão **Ver decisões** expõe os caminhos condicionais. As passagens mostram seu significado; detalhes apresentam autoria, esclarecimentos, perguntas e ideias separadamente. Matrizes e validação recebem o mesmo texto consolidado.
 
+Ao abrir um processo, **Ler etapas** preserva escala legível e inicia pela primeira atividade ou pela atividade selecionada. **Mapa inteiro** enquadra o conjunto quando o usuário precisa da visão geral. O percentual mostra a escala real na tela. A câmera acompanha mudanças no espaço disponível; ao navegar para outro processo, o enquadramento de leitura é restabelecido mesmo que a tela abra primeiro como lista no celular. Os controles ocupam uma faixa própria, sem cobrir os nós.
+
 Diagramas incompletos ou com nós de outro processo são rejeitados na leitura, preservando o desenho original. Cada nó precisa de posição finita; cada ligação precisa de identificador e metadados. Quando só há desenho básico, a visualização de decisões utiliza esse mesmo desenho.
 
 ## Verificação

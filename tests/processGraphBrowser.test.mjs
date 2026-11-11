@@ -52,6 +52,37 @@ async function option(f, selector) {
   await target.click();
 }
 async function close(f) { await f.getByRole('button', { name: 'Fechar detalhes', exact: true }).click(); }
+for(const viewport of [{width:1366,height:500},{width:390,height:560}])test('processes open at a readable size in '+viewport.width+'px',()=>scenario(async(f,page)=>{
+ if(viewport.width<=760)await f.evaluate(()=>{D.macros.find(m=>m.id==="M04").title="AcompanhamentoInterdepartamentalFictício de solicitações";});
+ if(viewport.width<=760)await f.locator('#overviewCards [data-scope="M04"]').click();
+ else await f.locator('#lista [data-open-macro="M04"]').click();
+ if(viewport.width<=760)await f.locator('#switchView').click();
+ const font=()=>f.locator('#graph .atividade text.title').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)*el.getScreenCTM().a);
+ assert(await font()>=13,'Opening a process must not shrink text to fit distant steps');
+ assert.equal(await f.locator('html').evaluate(el=>el.scrollWidth>innerWidth),false,'Short screens must not gain horizontal page overflow');
+ assert(await f.locator('#graph').evaluate(el=>el.getBoundingClientRect().right<=innerWidth+1),'The canvas must fit the screen even for long process names');
+ await f.getByRole('button',{name:'Mapa inteiro',exact:true}).click();
+ const boxes=await f.locator('#graph .atividade').evaluateAll(nodes=>{const r=document.querySelector('#graph').getBoundingClientRect();return nodes.every(n=>{const b=n.getBoundingClientRect();return b.left>=r.left-2&&b.right<=r.right+2&&b.top>=r.top-2&&b.bottom<=r.bottom+2;});});
+ assert(boxes,'Whole-map mode keeps all steps in view');
+ await f.getByRole('button',{name:'Ler etapas',exact:true}).click();
+ assert(await font()>=13,'Reading mode restores legible text');
+ if(viewport.width>760){
+  await page.setViewportSize({width:1024,height:480});
+  await f.waitForFunction(()=>{const t=document.querySelector('#graph .atividade text.title');return parseFloat(getComputedStyle(t).fontSize)*t.getScreenCTM().a>=13;});
+ }
+ const actual=await f.locator('#graph').evaluate(el=>el.getScreenCTM().a*100);
+ const displayed=parseInt(await f.locator('#zoomValue').textContent());
+ assert(Math.abs(actual-displayed)<=1,'Zoom percentage reports the real display scale');
+},viewport));
+test('switching mobile processes resets a manually moved camera even when the new process opens as a list',()=>scenario(async f=>{
+ await f.locator('#overviewCards [data-scope="M04"]').click();await f.locator('#switchView').click();
+ await f.locator('#alt-lista').click();await f.locator('#lista [data-activity="M04.A06"]').click();
+ await close(f);await f.locator('#zplus').click();
+ await f.locator('#alt-lista').click();await f.locator('#lista [data-open-macro="M01"]').click();
+ await f.locator('#switchView').click();
+ await f.waitForFunction(()=>{const n=document.querySelector('#graph [data-id="M01.A01"]'),r=document.querySelector('#graph').getBoundingClientRect(),b=n.getBoundingClientRect();return b.right>r.left&&b.left<r.right&&b.bottom>r.top&&b.top<r.bottom;});
+ assert.equal(await f.locator('#ajustar').getAttribute('aria-pressed'),'true');
+}, {width:390,height:560}));
 test('return arrows and their labels separate from the forward handoff',()=>scenario(async f=>{
  await f.locator('#lista [data-open-macro="M01"]').click();
  const forward=Number(await f.locator('[data-edge="M01.A01|M01.A02|fluxo"] .elabel').getAttribute('y'));
