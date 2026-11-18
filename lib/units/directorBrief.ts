@@ -10,6 +10,7 @@ export function directorBrief(content: ProcessContent, version: number) {
       id: macro.id, title: macro.title, account: String(macro.account || ""),
       activities: content.activities.filter(activity => activity.macro === macro.id).map(activity => ({
         id: activity.id, title: String(activity.short || activity.title),
+        account: String(activity.account || ""),
         risk: String(activity.risk || ""), proposal: String(activity.proposal || ""),
         question: String(activity.question || ""),
       })),

@@ -326,3 +326,31 @@
     font-size: 20pt;
   }
 }
+
+.catalogue {
+  background: white;
+  border: 1px solid #cadcdd;
+  padding: 12px 18px;
+  border-radius: 12px;
+}
+
+.catalogue summary {
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.stats > div:nth-child(2) {
+  background: linear-gradient(140deg, white, #e4eeff);
+  border-color: #c9daee;
+  box-shadow: 0 4px 0 #c9daee;
+}
+
+.stats > div:nth-child(3) {
+  background: linear-gradient(140deg, white, #f4e9ff);
+  border-color: #dfcbed;
+  box-shadow: 0 4px 0 #dfcbed;
+}
+
+@media print {
+  .catalogue { display: none; }
+}
