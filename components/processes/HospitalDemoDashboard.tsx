@@ -3,17 +3,19 @@
 import { UnitNavigation } from "@/components/units/UnitNavigation";
 import { useRef, useState } from "react";
 import { Hospital, Presentation, ArrowUpRight, Eye, ClipboardCheck } from "lucide-react";
+import type { DirectorBrief } from "@/lib/units/directorBrief";
+import { DirectorBriefing } from "./DirectorBriefing";
 import { ExecutiveVisuals } from "./ExecutiveVisuals";
 import { demoDays, initialDemo, rowError, stageNames, summarize } from "@/lib/processes/hospitalDemo";
 import type { DemoRow, Stage } from "@/lib/processes/hospitalDemo";
 import s from "./HospitalDemoDashboard.module.css";
 
-type View = "hospital" | "catarata" | "alimentacao";
+type View = "diagnostico" | "hospital" | "catarata" | "alimentacao";
 const quantityNames = { scheduled: "Agendados", completed: "Realizados", absent: "Faltas", postponed: "Adiamentos" };
 const integer = (n: number) => n.toLocaleString("pt-BR");
 const percentage = (n: number | null) => n === null ? "Sem agenda" : n.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
 
-function downloadOwners() {
+function downloadOwners(brief?: DirectorBrief) {
   const rows = [
     ["nome_completo", "email_conta_google", "area", "processo", "perfil_solicitado"],
     ["", "", "", "M01 - Comunicação com pacientes", "contribuir e validar pela área"],
@@ -22,7 +24,7 @@ function downloadOwners() {
     ["", "", "", "M04 - Marcação e acompanhamento de cirurgias", "contribuir e validar pela área"],
     ["", "", "", "M05 - Prontuários e arquivo", "contribuir e validar pela área"],
   ];
-  const url = URL.createObjectURL(new Blob(["\ufeff" + rows.map(row => row.join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob(["\ufeff" + (brief ? [rows[0], ...brief.macros.map(m => ["", "", "", m.id + " - " + m.title, "contribuir e validar pela área"])] : rows).map(row => row.map(v => '"' + v.replaceAll('"', '""') + '"').join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
   link.download = "Responsaveis_Processos_Hospital.csv";
@@ -39,8 +41,8 @@ function downloadTemplate() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital" }: { unitName: string; cnes: string; initialView?: "hospital" | "catarata" }) {
-  const [view, setView] = useState<View>(initialView);
+export function HospitalDemoDashboard({ unitName, cnes, brief, initialView = "hospital" }: { unitName: string; cnes: string; brief?: DirectorBrief; initialView?: "hospital" | "catarata" }) {
+  const [view, setView] = useState<View>(brief && initialView === "hospital" ? "diagnostico" : initialView);
   const [day, setDay] = useState("");
   const [hospital, setHospital] = useState(() => initialDemo(false));
   const [cataract, setCataract] = useState(() => initialDemo(true));
@@ -95,19 +97,19 @@ export function HospitalDemoDashboard({ unitName, cnes, initialView = "hospital"
     </header>
     <UnitNavigation cnes={cnes} current={initialView === "catarata" ? "acoes" : "painel"}/>
     {initialView === "catarata" && <a href={`/unidades/${cnes}/acoes`} className={s.back + " " + s.actionBack}>← Ações e projetos da unidade</a>}
-    <div className={s.demo}><span className={s.dot} /><strong>Demonstração com dados fictícios</strong>
-      <span>Fontes previstas: planilhas conferidas e lançamento manual.</span></div>
+    {view !== "diagnostico" && <div className={s.demo}><span className={s.dot} /><strong>Demonstração com dados fictícios</strong>
+      <span>Fontes previstas: planilhas conferidas e lançamento manual.</span></div>}
     {initialView === "hospital" && <nav className={s.tabs} aria-label="Visões do painel">
-      {([["hospital", "Painel"], ["alimentacao", "Como atualizar"]] as const).map(([value, title]) =>
+      {([...(brief ? [["diagnostico", "Diagnóstico das visitas"] as const] : []), ["hospital", brief ? "Simular produção" : "Painel"], ["alimentacao", "Como atualizar"]] as const).map(([value, title]) =>
         <button key={value} aria-pressed={view === value} onClick={() => switchView(value)}>{title}</button>)}
     </nav>}
 
-    {view === "alimentacao" ? <section className={s.start}>
+    {view === "diagnostico" && brief ? <DirectorBriefing brief={brief} cnes={cnes}/> : view === "alimentacao" ? <section className={s.start}>
       <div className={s.sectionTitle}><div><p className={s.eyebrow}>Próximo passo</p><h2>Começar pela rotina que o hospital já registra</h2></div><button className={s.button} onClick={downloadTemplate}>Baixar modelo de planilha</button></div>
       <div className={s.startGrid}>
         <article className={s.card}><h3>Uma consolidação simples</h3><p>O responsável reúne os totais por dia, etapa e procedimento, confere com a planilha da área e informa a data de atualização.</p><ul><li>Agendados e realizados</li><li>Faltas e adiamentos</li><li>Fonte e responsável pela conferência</li></ul></article>
         <article className={s.card}><h3>O que precisamos combinar</h3><p>Quem consolida, com qual frequência, o que cada quantidade significa e quais registros permitem conferir o resultado.</p><p>Para a catarata, confirmar o calendário de consultas, cirurgias e revisões e se a contagem se refere a pessoas, olhos ou procedimentos.</p></article>
-        <article className={s.card}><h3>Detalhar antes de validar</h3><p>Cada área completa a rotina, os responsáveis, os registros, as passagens e as exceções no painel de processos.</p><p>A coordenação indica os representantes entre as contas autorizadas. Reúna nome, área e o e-mail da conta Google de cada pessoa.</p><button className={s.quiet} onClick={downloadOwners}>Baixar lista de responsáveis</button><a href={`/unidades/${cnes}/processos/validacao`}>Abrir validação dos processos →</a></article>
+        <article className={s.card}><h3>Detalhar antes de validar</h3><p>Cada área completa a rotina, os responsáveis, os registros, as passagens e as exceções no painel de processos.</p><p>A coordenação indica os representantes entre as contas autorizadas. Reúna nome, área e o e-mail da conta Google de cada pessoa.</p><button className={s.quiet} onClick={() => downloadOwners(brief)}>Baixar lista de responsáveis</button><a href={`/unidades/${cnes}/processos/validacao`}>Abrir validação dos processos →</a></article>
       </div>
       <div className={s.note}><h3>Uma informação ainda desconhecida pode aparecer assim</h3><div className={s.unknownGrid}><p>Tempo médio de espera<strong>A levantar na fonte</strong></p><p>Pessoas distintas atendidas<strong>A confirmar pelo hospital</strong></p><p>Situação no sistema estadual<strong>Acesso e atualização a confirmar</strong></p></div></div>
       <p className={s.muted}>O modelo contém somente colunas para totais agregados. Os registros individuais permanecem sob os acessos autorizados do hospital.</p>
