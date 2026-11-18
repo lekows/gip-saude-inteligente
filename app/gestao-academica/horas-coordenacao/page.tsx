@@ -191,7 +191,7 @@ export default async function CoordinationHoursPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
-            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line, 4 h; a visita de 03/11, 20 h por acadêmico confirmado; o bloco administrativo declarado, 30 h por colaborador. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
+            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line, 4 h; as visitas de 03/11 e 12/11, 20 h por acadêmico confirmado em cada ação; o bloco administrativo declarado, 30 h por colaborador. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
             <Table className="min-w-[1100px]">
@@ -224,7 +224,7 @@ export default async function CoordinationHoursPage() {
               <CardTitle className="text-lg">Apoio administrativo e operacional</CardTitle>
               <p className="text-sm text-stone-500">Bloco de 30 h por colaborador, declarado pelo responsável para o período de 01/08 a 04/11/2026. As tarefas não foram distribuídas em horas individuais por tipo. A validação institucional ainda é necessária para certificação.</p>
               <p className="text-sm text-stone-600">{administrativeRows[0].scope_note}</p>
-              <p className="text-xs text-stone-500">As duas reuniões on-line já lançadas, os treinamentos e a visita de campo são etapas distintas. A estimativa de desenvolvimento de 85 h atribuída a Leonardo Karino é um controle separado e não deve ser somada automaticamente a este bloco.</p>
+              <p className="text-xs text-stone-500">As duas reuniões on-line já lançadas, os treinamentos e as visitas de campo são etapas distintas. A estimativa de desenvolvimento de 85 h atribuída a Leonardo Karino é um controle separado e não deve ser somada automaticamente a este bloco.</p>
             </CardHeader>
             <CardContent className="overflow-x-auto px-0 pb-0">
               <Table className="min-w-[750px]">
