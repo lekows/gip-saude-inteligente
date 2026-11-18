@@ -1,0 +1,328 @@
+.brief {
+  --ink: #163d48;
+  --accent: #097d73;
+  color: var(--ink);
+  margin: 24px auto;
+}
+
+.lead,.pilot,.instrument,.print,.pilot a,.activity a {
+  display: flex;
+  align-items: center;
+}
+
+.lead,.pilot {
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.lead h2 {
+  font-size: clamp(28px,4vw,48px);
+  font-weight: 650;
+  letter-spacing: -.055em;
+  line-height: 1.1;
+  margin: 6px 0;
+}
+
+.brief h3 {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -.035em;
+  line-height: 1.2;
+  margin: 2px 0 8px;
+}
+
+.brief p {
+  margin: 5px 0 12px;
+  line-height: 1.55;
+}
+
+.kicker {
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #326c6b;
+}
+
+.print,.pilot a {
+  gap: 7px;
+  border: 1px solid #a9c6c7;
+  padding: 9px 14px;
+  border-radius: 9px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.stats>div {
+  border: 1px solid #c8dddd;
+  border-radius: 14px;
+  background: linear-gradient(140deg,#fff,#e6f2f0);
+  box-shadow: 0 4px 0 #d2e3e1,0 9px 16px #143c4310;
+  padding: 16px 22px;
+  display: grid;
+}
+
+.stats strong {
+  font-size: 36px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.stats span {
+  font-size: 13px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+.chart,.detail,.measure,.sources {
+  border-radius: 16px;
+  border: 1px solid #d3e0e1;
+  background: #fff;
+  padding: 22px;
+}
+
+.detail {
+  box-shadow: 4px 5px 0 #d7e6e5,8px 10px 22px #153e4510;
+  border-top: 3px solid var(--accent);
+}
+
+.bars {
+  display: grid;
+  gap: 3px;
+}
+
+.bars button {
+  display: grid;
+  grid-template-columns: minmax(100px,1.45fr) minmax(42px,1fr) 22px;
+  gap: 9px;
+  text-align: left;
+  align-items: center;
+  border-radius: 7px;
+  padding: 7px 8px;
+  min-height: 38px;
+  font-size: 13px;
+}
+
+.bars button[aria-pressed=true] {
+  background: #e4f4ef;
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+.bars i {
+  height: 9px;
+  border-radius: 3px;
+  background: #eef3f3;
+}
+
+.bars b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(#48ad9b,#147e76);
+  border-radius: 3px;
+  box-shadow: 0 2px #135f59;
+}
+
+.bars strong {
+  text-align: right;
+}
+
+.instrument {
+  gap: 14px;
+  margin: 15px 0;
+  color: #156f69;
+}
+
+.instrument strong,.instrument small {
+  display: block;
+}
+
+.dial {
+  position: relative;
+  width: 84px;
+  height: 42px;
+  background: conic-gradient(from 270deg at 50% 100%,#d4ebe6,#358e86 180deg,transparent 0);
+  border-radius: 84px 84px 0 0;
+  overflow: hidden;
+}
+
+.dial:before {
+  content: "";
+  position: absolute;
+  inset: 9px 9px 0;
+  background: white;
+  border-radius: 70px 70px 0 0;
+}
+
+.dial i {
+  position: absolute;
+  bottom: 0;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 35px;
+  background: #203d4b;
+  transform-origin: bottom center;
+  border-radius: 4px;
+}
+
+.activity,.sources {
+  border-top: 1px solid #d8e5e4;
+}
+
+.activity summary,.measure summary,.sources summary {
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.activity dl {
+  margin: 8px 0;
+}
+
+.activity dt {
+  font-size: 12px;
+  color: #356963;
+  font-weight: 700;
+}
+
+.activity dd {
+  margin: 0 0 8px;
+}
+
+.activity a {
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.pilot {
+  border-radius: 16px;
+  background: #123f48;
+  color: #fff;
+  margin: 22px 0 16px;
+  padding: 23px;
+}
+
+.pilot .kicker {
+  color: #a3dacb;
+}
+
+.pilot a {
+  color: #15464a;
+}
+
+.measure>div {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 12px;
+}
+
+.measure details {
+  border-left: 3px solid #81b5ab;
+  padding-left: 12px;
+}
+
+.sources {
+  margin-top: 12px;
+  padding: 10px 20px;
+}
+
+.sources ul {
+  padding: 0 18px;
+  list-style: disc;
+}
+
+.sources a {
+  display: inline-block;
+  margin: 8px 0;
+}
+
+@media(max-width:800px) {
+  .board,.measure>div {
+    grid-template-columns: 1fr;
+  }
+
+  .lead,.pilot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .stats>div {
+    padding: 12px;
+  }
+
+  .stats {
+    gap: 7px;
+  }
+
+  .stats strong {
+    font-size: 27px;
+  }
+
+  .stats span {
+    font-size: 11px;
+  }
+
+  .chart,.detail,.measure,.pilot {
+    padding: 15px;
+  }
+
+  .brief h3 {
+    font-size: 18px;
+  }
+}
+
+@media print {
+  .brief {
+    font-size: 10pt;
+    margin: 8px 0;
+  }
+
+  .lead h2 {
+    font-size: 22pt;
+  }
+
+  .print,.pilot a,.sources,.activity a {
+    display: none;
+  }
+
+  .board {
+    display: block;
+  }
+
+  .chart,.detail,.pilot,.measure {
+    break-inside: avoid;
+    margin-bottom: 10px;
+  }
+
+  .stats {
+    margin: 10px 0;
+  }
+
+  .stats>div,.detail {
+    box-shadow: none;
+  }
+
+  .bars b,.pilot,.dial,.stats>div {
+    print-color-adjust: exact;
+  }
+
+  .instrument {
+    margin: 6px 0;
+  }
+
+  .stats strong {
+    font-size: 20pt;
+  }
+}

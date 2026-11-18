@@ -14,6 +14,6 @@ export async function unitWorkspace(cnes: string, destination: string) {
     .eq("health_unit_id", unit.id).order("version", { ascending: false }).limit(1).maybeSingle();
   if (maps.error) throw new Error("Não foi possível consultar os trabalhos da unidade.");
   if (!maps.data) notFound();
-  return unit;
+  return { ...unit, mapId: maps.data.id, supabase: context.supabase };
 }
 
