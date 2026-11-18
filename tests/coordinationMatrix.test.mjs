@@ -43,6 +43,17 @@ test("visita credita somente os colaboradores confirmados, separada das reuniõe
   ]);
 });
 
+test("revisão de processos recebe rótulo próprio e credita apenas quem participou", () => {
+  const result = buildCoordinationMatrix(
+    [{ profileId: "ana", memberId: "member-ana", fullName: "Ana" }],
+    [], [], [],
+    [{ activityId: "review", profileId: "outra", date: "2026-11-05", title: "Conferência de processos", activityType: "revisao_processos", hours: 10 }],
+  );
+  assert.equal(result.stages[0].label, "Revisão no GIP");
+  assert.equal(result.participants[0].cells[0].status, "sem_registro");
+  assert.equal(result.participants[0].totalHours, 0);
+});
+
 test("apoio administrativo declarado aparece como etapa separada sem duplicar reuniões ou campo", () => {
   const result = buildCoordinationMatrix(
     [{ profileId: "ana", memberId: "member-ana", fullName: "Ana" }],

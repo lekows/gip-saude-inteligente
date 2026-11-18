@@ -164,7 +164,7 @@ export default async function MyGipPage() {
             </Card>
             {journey.fieldActivities.length ? (
               <Card className="mt-5">
-                <CardHeader><CardTitle className="text-base">Minhas atividades de campo</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">Minhas atividades complementares</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   {journey.fieldActivities.map((activity) => (
                     <div key={activity.activityId} className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 pt-3 text-sm">
