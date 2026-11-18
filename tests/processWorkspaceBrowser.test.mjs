@@ -38,8 +38,8 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
    if(r.request().url().includes("/api/processos/")){frameLoads++;return r.fulfill({contentType:"text/html",body:html});}
    return r.fulfill({contentType:"text/html",body:'<meta charset="utf-8"><meta name="viewport" content="width=device-width"><div id="root"></div>'});
   });
-  await page.goto("https://hospital.test/unidades/0000001/processos");
-  const fixture={map:{id:"fixture",version:1,status:"open"},unitName:"Hospital fictício",cnes:"0000001",userId:"rep",manager:false,canContribute:true,
+  await page.goto("https://hospital.test/unidades/0000001/processos"+(width===1440?"?rodada=1":""));
+  const fixture={map:{id:"fixture",version:1,status:"open"},unitName:"Hospital fictício",cnes:"0000001",userId:"rep",manager:false,canContribute:true,...(width===1440?{versions:[2,1]}:{}),
    items:[{id:"__map__",title:"Visão geral"},...data.macros,...data.activities,...data.questions].map(({id,title})=>({id,title})),
    feedback:[{id:"comment",author_id:"rep",item_id:"M01.A01",map_version:1,kind:"question",message:"Pergunta fictícia de origem",proposal:"",created_at:"2026-01-01"}],
    editorial:[{id:1,map_version:1,source_feedback_id:"comment",item_id:"M01.A01",decision:"accepted",source_author_name:"Colaboradora fictícia",note:"Descrição aprimorada com autoria preservada.",created_at:"2026-01-02"}],
@@ -49,7 +49,7 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
   await page.evaluate(p=>{
    window.fixture=p;
    Object.defineProperty(navigator,"clipboard",{value:{writeText:async text=>{window.copied=text;}}});
-  },{...fixture,activityId:url.searchParams.get("atividade")||undefined,
+  },{...fixture,version:Number(url.searchParams.get("rodada"))||undefined,activityId:url.searchParams.get("atividade")||undefined,
    validation:validation?{macros:data.macros,activities:data.activities,ledger:{assignments:[],events:[]}}:null});
   await page.addStyleTag({content:css});await page.addScriptTag({content:js});
   };
@@ -68,7 +68,8 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
   await page.waitForFunction(()=>new URL(location.href).searchParams.get("atividade")==="M04.A02");
   assert.equal(frameLoads,1,"State changes must not reload the embedded diagram");
   const href=await page.getByRole("link",{name:"Validação pelas áreas",exact:true}).getAttribute("href");
-  assert(href.includes("?atividade=M04.A02"));
+  assert.equal(new URL(href,page.url()).searchParams.get("atividade"),"M04.A02");
+  assert.equal(new URL(href,page.url()).searchParams.get("rodada"),width===1440?"1":null);
   assert(href.includes("#m=M04&n=M04.A02"));
   await page.getByRole("button",{name:"Dar opinião",exact:true}).click();
   assert.equal(await page.locator("dialog select").first().inputValue(),"M04.A02");
@@ -76,6 +77,13 @@ test("the real workspace shares activity context, keeps the frame mounted and ig
   await page.locator("header > nav details > summary").click();
   await page.getByRole("button",{name:"Copiar link para compartilhar",exact:true}).click();
   assert.equal(await page.evaluate(()=>new URL(window.copied).searchParams.get("atividade")),"M04.A02");
+  if(width===1440){
+    const roundMenu=page.getByRole("navigation",{name:/Visualização dos processos/}).locator("summary");
+    await roundMenu.click();
+    assert.equal(await page.getByRole("link",{name:"Abrir rodada 2"}).getAttribute("href"),"/unidades/0000001/processos?rodada=2");
+    await roundMenu.click();
+    assert.equal(await page.evaluate(()=>new URL(window.copied).searchParams.get("rodada")),"1");
+  }
   const before=page.url();
   await page.evaluate(()=>dispatchEvent(new MessageEvent("message",{origin:location.origin,source:window,data:{type:"gip-process-navigation",hash:"#n=M04.A01"}})));
   assert.equal(page.url(),before);

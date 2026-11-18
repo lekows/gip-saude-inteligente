@@ -10,6 +10,8 @@ import {applyEditorialContent} from '../lib/processes/editorial.ts';
 // A real, isolated Chromium in CI. No Supabase, login, production requests or real data.
 const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE_PATH).href);
 const baseline=processGraphFixture();
+baseline.sources.push({id:"F07",title:"Conversa fictícia da equipe",detail:"Fonte de teste sem dados institucionais."});
+Object.assign(baseline.activities.find(a=>a.id==="M02.A01"),{source:"Conversa fictícia em 06/11",sourceIds:["F07"]});
 baseline.flows.scoped.M01.base.edges.push({id:"fictional-return",from:"M01.A02",to:"M01.A01",kind:"excecao",label:"Conferir novamente",basis:"Exceção fictícia",source:"Fonte fictícia",inferred:true});
 const data=applyEditorialContent(baseline,[{id:1,map_version:1,item_id:"M01.A01",source_feedback_id:"fictional-source",
  source_author_name:"Colaboradora fictícia",decision:"accepted",
@@ -52,6 +54,19 @@ async function option(f, selector) {
   await target.click();
 }
 async function close(f) { await f.getByRole('button', { name: 'Fechar detalhes', exact: true }).click(); }
+test('a revised activity shows its own source in the map and detail',()=>scenario(async f=>{
+  await f.locator('#lista [data-open-macro="M02"]').click();
+  await option(f,'[data-type="fonte"]');
+  assert.equal(await f.locator('#graph [data-id="F07"]').count(),1);
+  assert.equal(await f.locator('#graph [data-id="F05"]').count(),1,"Older activities retain their source layer");
+  await f.locator('#lista [data-activity="M02.A01"]').click();
+  await f.getByText('Fontes e informações do levantamento',{exact:true}).click();
+  const details=f.locator('#painel details').filter({hasText:'Fontes e informações do levantamento'});
+  assert.match(await details.textContent(),/Conversa fictícia em 06\/11/);
+  assert.doesNotMatch(await details.textContent(),/F05|Tempos aproximados/);
+  await details.getByRole('button',{name:/Conversa fictícia da equipe/}).click();
+  assert.match(await f.locator('#painel h2').textContent(),/Conversa fictícia da equipe/);
+}));
 for(const viewport of [{width:1366,height:500},{width:390,height:560}])test('processes open at a readable size in '+viewport.width+'px',()=>scenario(async(f,page)=>{
  if(viewport.width<=760)await f.evaluate(()=>{D.macros.find(m=>m.id==="M04").title="AcompanhamentoInterdepartamentalFictício de solicitações";});
  if(viewport.width<=760)await f.locator('#overviewCards [data-scope="M04"]').click();
@@ -217,7 +232,7 @@ test('search across scopes, edge handoffs, sources and contextual feedback bridg
   await f.locator('#painel [data-node]').last().click(); assert(await f.locator('#painel').isVisible()); await close(f);
   await f.locator('#graph [data-edge]').first().focus(); await f.locator('#graph [data-edge]').first().press('Enter');
   assert((await f.locator('#painel').textContent()).includes('Passagem entre atividades')); await close(f);
-  await option(f, '#sources'); await f.locator('#painel summary').click(); assert.equal(await f.locator('#painel .source-card').count(), 4); await close(f);
+  await option(f, '#sources'); await f.locator('#painel summary').click(); assert.equal(await f.locator('#painel .source-card').count(), data.sources.filter(source=>source.id!=='F06').length); await close(f);
 }));
 
 test('stepper, keyboard, zoom, fit, drag, browser back and reload keep navigation usable', () => scenario(async (f, page) => {

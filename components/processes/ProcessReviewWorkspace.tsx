@@ -13,12 +13,12 @@ import {useProcessNavigation} from "./useProcessNavigation";
 import {normalizeProcessHash,processHref} from "@/lib/processes/navigation";
 import {editorialLabel,latestEditorial,type EditorialRevision} from "@/lib/processes/editorial";
 import {EditorialFeedback} from "./EditorialFeedback";
-type Props = { editorial?:EditorialRevision[]; validation:ValidationData|null; activityId?:string; map: ProcessMap; unitName: string; cnes: string; userId: string; manager: boolean; canContribute: boolean; items: { id: string; title: string }[]; feedback: ProcessFeedback[]; reviews: ProcessFeedbackReview[]; members: ProcessMember[]; people: ProcessPerson[] };
+type Props = { version?:number; versions?:number[]; editorial?:EditorialRevision[]; validation:ValidationData|null; activityId?:string; map: ProcessMap; unitName: string; cnes: string; userId: string; manager: boolean; canContribute: boolean; items: { id: string; title: string }[]; feedback: ProcessFeedback[]; reviews: ProcessFeedbackReview[]; members: ProcessMember[]; people: ProcessPerson[] };
 const button = "rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:border-folha disabled:opacity-50";
 const input = "mt-1 w-full rounded-md border border-stone-300 bg-white p-2 text-sm";
 export function ProcessReviewWorkspace(p: Props) {
   const router = useRouter(), frame = useRef<HTMLIFrameElement>(null), dialog = useRef<HTMLDialogElement>(null);
-  const navigation=useProcessNavigation({cnes:p.cnes,validation:!!p.validation,activityId:p.activityId,items:p.items,frame});
+  const navigation=useProcessNavigation({cnes:p.cnes,validation:!!p.validation,version:p.version,activityId:p.activityId,items:p.items,frame});
   const [feedbackItem,setFeedbackItem]=useState<string|null>(null);
   const [panel, setPanel] = useState<"suggest" | "feedback" | "members" | null>(null), [pending, start] = useTransition();
   const [itemId, setItemId] = useState("__map__"), [kind, setKind] = useState<keyof typeof FEEDBACK_KINDS>("question");
@@ -34,7 +34,7 @@ export function ProcessReviewWorkspace(p: Props) {
       if (typeof event.data.itemId !== "string" || !p.items.some(i => i.id === event.data.itemId)) return;
       if (event.data.type === "gip-process-validation") {
         const q=new URLSearchParams(window.location.hash.slice(1));q.set("n",event.data.itemId);
-        router.push(processHref(p.cnes,true,normalizeProcessHash("#"+q.toString(),p.items.map(i=>i.id))));
+        router.push(processHref(p.cnes,true,normalizeProcessHash("#"+q.toString(),p.items.map(i=>i.id)),p.version));
         return;
       }
       setItemId(event.data.itemId);
@@ -42,7 +42,7 @@ export function ProcessReviewWorkspace(p: Props) {
       setPanel("suggest");
     };
     window.addEventListener("message", handler); return () => window.removeEventListener("message", handler);
-  }, [p.items,p.cnes,router]);
+  }, [p.items,p.cnes,p.version,router]);
   const run = (action: () => Promise<ProcessActionResult>, onSuccess?: () => void) => start(async () => {
     try { const result = await action(); setNoticeError(Boolean(result.error)); setNotice(result.error || result.success || "Operação concluída."); if (!result.error) { onSuccess?.(); router.refresh(); } }
     catch { setNoticeError(true); setNotice("Falha de conexão. Seu texto foi mantido; tente novamente."); }
@@ -54,7 +54,7 @@ export function ProcessReviewWorkspace(p: Props) {
   const editorial=(id:string)=>latestEditorial((p.editorial??[]).filter(r=>r.source_feedback_id===id&&r.map_version===p.map.version)).at(-1);
   const statusOf=(id:string)=>latest(id)?REVIEW_DECISIONS[latest(id).decision]:editorial(id)?editorialLabel[editorial(id)!.decision]:"Aguardando análise";
   const open = (which: typeof panel) => { setNotice(""); setPanel(which); };
-  async function copyLink() { try { await navigator.clipboard.writeText(window.location.origin+processHref(p.cnes,!!p.validation,navigation.hash)); setNoticeError(false); setNotice("Link deste ponto copiado. O acesso continua restrito às contas autorizadas."); } catch { setNoticeError(true); setNotice("Copie o endereço desta página pela barra do navegador."); } }
+  async function copyLink() { try { await navigator.clipboard.writeText(window.location.origin+processHref(p.cnes,!!p.validation,navigation.hash,p.versions&&p.versions.length>1?p.map.version:p.version)); setNoticeError(false); setNotice("Link deste ponto copiado. O acesso continua restrito às contas autorizadas."); } catch { setNoticeError(true); setNotice("Copie o endereço desta página pela barra do navegador."); } }
   function exportFeedback() {
     const cell = (s: string) => '"' + (/^\s*[=+@-]/.test(s) ? "'" + s : s).replace(/"/g, '""') + '"';
     const rows = [["Etapa", "Tipo", "Contribuição", "Proposta", "Participante", "Data", "Análise", "Devolutiva"], ...p.feedback.map(f => [f.item_id, FEEDBACK_KINDS[f.kind], f.message, f.proposal, person(f.author_id), formatDate(f.created_at), statusOf(f.id), latest(f.id)?.message || editorial(f.id)?.note || ""])];
@@ -86,16 +86,24 @@ export function ProcessReviewWorkspace(p: Props) {
     </header>
     <UnitNavigation cnes={p.cnes} current="processos"/>
     <nav className={styles.processModes} aria-label="Visualização dos processos">
-      <Link href={processHref(p.cnes,false,navigation.hash)} aria-current={!p.validation?"page":undefined}>Teia de processos</Link>
-      <Link href={processHref(p.cnes,true,navigation.hash)} aria-current={p.validation?"page":undefined}>Validação pelas áreas</Link>
+      <Link href={processHref(p.cnes,false,navigation.hash,p.version)} aria-current={!p.validation?"page":undefined}>Teia de processos</Link>
+      <Link href={processHref(p.cnes,true,navigation.hash,p.version)} aria-current={p.validation?"page":undefined}>Validação pelas áreas</Link>
+      {(p.versions?.length??0)>1 && <details className={styles.manage}>
+        <summary className={styles.secondary}>Rodada {p.map.version} <span aria-hidden="true">⌄</span></summary>
+        <div className={styles.roundMenu}>
+          {p.versions?.map(version=>version===p.map.version
+            ? <span key={version} aria-current="true">Rodada {version} · em exibição</span>
+            : <Link key={version} href={processHref(p.cnes,!!p.validation,"",version)}>Abrir rodada {version}</Link>)}
+        </div>
+      </details>}
     </nav>
 
     {!panel && notice && <p className={`border-b px-4 py-2 text-sm ${noticeError ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`} role="status">{notice}</p>}
-    {p.validation ? <AreaValidationPanel focusItem={p.activityId} onActivityOpen={navigation.selectActivity} navigationHash={navigation.hash} {...p.validation} map={p.map} cnes={p.cnes} manager={p.manager} canContribute={p.canContribute} userId={p.userId}
+    {p.validation ? <AreaValidationPanel focusItem={p.activityId} onActivityOpen={navigation.selectActivity} navigationHash={navigation.hash} version={p.version} {...p.validation} map={p.map} cnes={p.cnes} manager={p.manager} canContribute={p.canContribute} userId={p.userId}
       people={p.people.filter(person=>p.members.some(m=>m.active && m.participation==="reviewer" && m.profile_id===person.id))}
       feedback={p.feedback} suggest={(id,k)=>{setItemId(id);setKind(k);open("suggest");}} review={id=>{setFeedbackItem(id);open("feedback");}} manage={()=>open("members")}/>
       : <section className={styles.graphRegion} aria-label="Exploração dos processos">
-        {navigation.status!=="ready" && <div className={styles.frameNotice} role="status">{navigation.status==="error"?<><p>O diagrama não respondeu. Tente recarregar ou confira seu acesso.</p><button className={styles.secondary} onClick={navigation.retry}>Recarregar diagrama</button><Link href={processHref(p.cnes,true,navigation.hash)}>Abrir lista de validação</Link></>:"Carregando processos…"}</div>}
+        {navigation.status!=="ready" && <div className={styles.frameNotice} role="status">{navigation.status==="error"?<><p>O diagrama não respondeu. Tente recarregar ou confira seu acesso.</p><button className={styles.secondary} onClick={navigation.retry}>Recarregar diagrama</button><Link href={processHref(p.cnes,true,navigation.hash,p.version)}>Abrir lista de validação</Link></>:"Carregando processos…"}</div>}
         <iframe key={navigation.attempt} ref={frame} onLoad={navigation.onFrameLoad} src={`/api/processos/${p.map.id}/grafo`} title={`Teia de processos · ${p.unitName}`} className={styles.graph} sandbox="allow-scripts allow-same-origin" referrerPolicy="same-origin" />
       </section>}
     <dialog ref={dialog} onCancel={() => setPanel(null)} onClose={() => setPanel(null)} className="fixed inset-0 m-auto max-h-[92dvh] w-[min(960px,96vw)] overflow-auto rounded-xl border border-stone-300 bg-[#fcfcfb] p-0 text-ink shadow-2xl backdrop:bg-black/40">
