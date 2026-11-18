@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowUpRight, Printer } from "lucide-react";
 import type { DirectorBrief } from "@/lib/units/directorBrief";
+import { DirectorJourneyExplorer } from "./DirectorJourneyExplorer";
 import s from "./DirectorBriefing.module.css";
 
 const measures = [
@@ -21,12 +22,15 @@ export function DirectorBriefing({ brief, cnes }: { brief: DirectorBrief; cnes: 
 
   return <section className={s.brief} aria-label="Diagnóstico dos processos">
     <header className={s.lead}><div><p className={s.kicker}>Diagnóstico de campo · Teia v{brief.version}</p>
-      <h2>O percurso do paciente</h2><p>Explore onde o encaminhamento muda de mãos e o que cada setor precisa confirmar.</p></div>
+      <h2>O percurso do paciente</h2><p>Do primeiro contato à cirurgia e à guarda do prontuário.</p></div>
       <button className={s.print} onClick={() => window.print()}><Printer size={16}/>Imprimir painel</button>
     </header>
     <div className={s.stats}>{[[brief.macros.length,"Macroprocessos"],[brief.activities,"Atividades mapeadas"],[brief.questions,"Perguntas registradas"]].map(([n,label]) =>
       <div key={label}><strong>{n}</strong><span>{label}</span></div>)}</div>
-    <div className={s.board}><section className={s.chart}><h3>Atividades por macroprocesso</h3><p>Selecione uma barra para ler o relato da equipe.</p>
+    <DirectorJourneyExplorer brief={brief} base={base}/>
+    <details className={s.catalogue}>
+      <summary>Explorar os macroprocessos e as atividades mapeadas</summary>
+      <div className={s.board}><section className={s.chart}><h3>Atividades por macroprocesso</h3><p>Selecione uma barra para ler o relato da equipe.</p>
       <div className={s.bars}>{brief.macros.map(m => <button key={m.id} aria-pressed={m.id === selected} onClick={() => setSelected(m.id)}>
         <span>{m.title}</span><i aria-hidden="true"><b style={{width: 100*m.activities.length/max+"%"}}/></i><strong>{m.activities.length}</strong>
       </button>)}</div></section>
@@ -38,6 +42,7 @@ export function DirectorBriefing({ brief, cnes }: { brief: DirectorBrief; cnes: 
           {([["Risco a conferir",a.risk],["Melhoria proposta",a.proposal],["Pergunta à área",a.question]]).filter(([,v])=>v).map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
         </dl><a href={base+"/validacao?atividade="+encodeURIComponent(a.id)}>Abrir ficha de validação <ArrowUpRight size={13}/></a></details>)}
       </section>}</div>
+    </details>
     <section className={s.pilot}><div><p className={s.kicker}>Proposta para deliberação</p><h3>Piloto de atualização de contatos</h3>
       <p>Escolher uma UBS e a marcação cirúrgica. Confirmar o telefone na base autorizada, registrar se a marcação consegue vê-lo e verificar se o paciente recebeu a orientação.</p>
       <p><strong>Decisão da direção</strong> · Indicar quem pode atualizar a base, quem acompanha os casos sem resposta e quando os setores revisarão os resultados.</p></div>
