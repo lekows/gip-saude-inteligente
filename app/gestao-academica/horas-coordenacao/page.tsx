@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { buildCoordinationMatrix } from "@/lib/academic/coordinationMatrix";
+import { buildCoordinationMatrix, type CoordinationFieldEntry } from "@/lib/academic/coordinationMatrix";
 
 type HoursRow = {
   id: string;
@@ -72,7 +72,7 @@ export default async function CoordinationHoursPage() {
   let classes: CoordinationClass[] = [];
   let enrollments: { id: string; class_id: string; member_id: string; completed_workload_hours: number | string }[] = [];
   let attendance: { enrollment_id: string; status: "presente" | "ausente" | "justificado" }[] = [];
-  let fieldEntries: { activityId: string; profileId: string; date: string; title: string; hours: number }[] = [];
+  let fieldEntries: CoordinationFieldEntry[] = [];
   if (cycle) {
     const [ledgerResult, membersResult, classesResult, activitiesResult, administrativeResult] = await Promise.all([
       supabase.from("coordination_hours")
@@ -83,7 +83,7 @@ export default async function CoordinationHoursPage() {
       supabase.from("training_classes").select("id, title, starts_at, training_modules(workload_hours)")
         .eq("cycle_id", cycle.id).eq("status", "concluida").order("starts_at")
         .overrideTypes<CoordinationClass[], { merge: false }>(),
-      supabase.from("activities").select("id, title")
+      supabase.from("activities").select("id, title, activity_type")
         .eq("cycle_id", cycle.id).eq("status", "concluida"),
       supabase.from("administrative_hours")
         .select("id, profile_id, period_start, period_end, activity_title, credited_hours, scope_note, source_note, validation_status")
@@ -104,12 +104,13 @@ export default async function CoordinationHoursPage() {
         .select("activity_id, profile_id, activity_date, credited_hours")
         .in("activity_id", activities.map((activity) => activity.id));
       if (error) throw error;
-      const titleById = new Map(activities.map((activity) => [activity.id, activity.title]));
+      const activityById = new Map(activities.map((activity) => [activity.id, activity]));
       fieldEntries = (data ?? []).map((entry) => ({
         activityId: entry.activity_id,
+        activityType: activityById.get(entry.activity_id)?.activity_type,
         profileId: entry.profile_id,
         date: entry.activity_date,
-        title: titleById.get(entry.activity_id) ?? "Atividade de campo",
+        title: activityById.get(entry.activity_id)?.title ?? "Atividade do projeto",
         hours: Number(entry.credited_hours),
       }));
     }
@@ -196,7 +197,7 @@ export default async function CoordinationHoursPage() {
         <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <SummaryCard label="Preparação" hours={totalPreparation} />
           <SummaryCard label="Reuniões" hours={totalMeeting} />
-          <SummaryCard label="Campo" hours={matrix.participants.reduce((sum, person) => sum + person.fieldHours, 0)} />
+          <SummaryCard label="Visitas e outras atividades" hours={matrix.participants.reduce((sum, person) => sum + person.fieldHours, 0)} />
           <SummaryCard label="Administrativas" hours={matrix.participants.reduce((sum, person) => sum + person.administrativeHours, 0)} />
           <SummaryCard label="Total registrado" hours={matrix.participants.reduce((sum, person) => sum + person.totalHours, 0)} />
         </section>
@@ -204,14 +205,14 @@ export default async function CoordinationHoursPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
-            <p className="text-sm text-stone-500"><strong>{trainingCredit}</strong> Reuniões, visitas e apoio administrativo mostram as horas lançadas para cada colaborador. “0 h · falta” indica ausência registrada. “—” indica etapa sem crédito.</p>
+            <p className="text-sm text-stone-500"><strong>{trainingCredit}</strong> As demais etapas mostram as horas lançadas para cada colaborador. “0 h · falta” indica ausência registrada. “—” indica etapa sem crédito.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
             <Table className="min-w-[1100px]">
               <TableHeader><TableRow>
                 <TableHead className="pl-6">Acadêmico colaborador</TableHead>
                 {matrix.stages.map((stage) => <TableHead key={stage.key} className="min-w-36"><span className="block">{formatStageDate(stage.date)}</span><span className="block text-xs font-semibold">{stage.label}</span><span className="block max-w-40 text-xs font-normal leading-tight">{stage.title}</span></TableHead>)}
-                <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead>Campo</TableHead><TableHead>Administrativas</TableHead><TableHead className="pr-6">Total</TableHead>
+                <TableHead>Capacitações</TableHead><TableHead>Reuniões</TableHead><TableHead>Visitas e outras atividades</TableHead><TableHead>Administrativas</TableHead><TableHead className="pr-6">Total</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {matrix.participants.map((person) => (

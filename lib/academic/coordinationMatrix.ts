@@ -27,6 +27,7 @@ export type CoordinationMeetingEntry = {
 
 export type CoordinationFieldEntry = {
   activityId: string;
+  activityType?: string;
   profileId: string;
   date: string;
   title: string;
@@ -80,7 +81,7 @@ export function buildCoordinationMatrix(
     ...[...new Map(fieldEntries.map((entry) => [entry.activityId, {
       key: `field:${entry.activityId}`,
       date: entry.date,
-      label: "Visita técnica",
+      label: entry.activityType === "revisao_processos" ? "Revisão no GIP" : "Visita técnica",
       title: entry.title,
       kind: "field" as const,
     }])).values()],

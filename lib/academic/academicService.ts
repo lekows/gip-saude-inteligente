@@ -517,7 +517,7 @@ async function loadFieldHours(supabase: SupabaseClient, cycleId: string): Promis
   const titleById = new Map(activities.map((activity) => [activity.id, activity.title]));
   return (data ?? []).map((entry) => ({
     ...entry,
-    title: titleById.get(entry.activity_id) ?? "Atividade de campo",
+    title: titleById.get(entry.activity_id) ?? "Atividade do projeto",
   }));
 }
 
