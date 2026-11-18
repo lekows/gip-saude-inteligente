@@ -22,7 +22,7 @@ const pilotTrainings = [
     area: "Integração",
     startsAt: "2026-08-12T18:30:00-03:00",
     endsAt: "2026-08-12T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 20,
   },
   {
     title: "Capacitação 1 - Da pergunta clínica à ação territorial",
@@ -30,7 +30,7 @@ const pilotTrainings = [
     area: "Clínica e tecnologia",
     startsAt: "2026-08-19T18:30:00-03:00",
     endsAt: "2026-08-19T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 20,
   },
   {
     title: "Capacitação 2 - Inteligência artificial e dados em saúde",
@@ -38,7 +38,7 @@ const pilotTrainings = [
     area: "IA e dados",
     startsAt: "2026-08-26T18:30:00-03:00",
     endsAt: "2026-08-26T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 20,
   },
   {
     title: "Capacitação 4 - Inteligência territorial e ação comunitária",
@@ -46,7 +46,7 @@ const pilotTrainings = [
     area: "Território e comunidade",
     startsAt: "2026-09-09T18:30:00-03:00",
     endsAt: "2026-09-09T22:30:00-03:00",
-    workloadHours: 10,
+    workloadHours: 20,
   },
 ] as const;
 
