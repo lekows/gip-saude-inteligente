@@ -34,6 +34,13 @@ type AdministrativeRow = {
   validation_status: "declarado" | "validado";
 };
 
+type CoordinationClass = {
+  id: string;
+  title: string | null;
+  starts_at: string;
+  training_modules: { workload_hours: number | string } | null;
+};
+
 export default async function CoordinationHoursPage() {
   const supabase = await getSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -62,7 +69,7 @@ export default async function CoordinationHoursPage() {
   let administrativeRows: AdministrativeRow[] = [];
   const names = new Map<string, string>();
   let members: { id: string; profile_id: string }[] = [];
-  let classes: { id: string; title: string | null; starts_at: string }[] = [];
+  let classes: CoordinationClass[] = [];
   let enrollments: { id: string; class_id: string; member_id: string; completed_workload_hours: number | string }[] = [];
   let attendance: { enrollment_id: string; status: "presente" | "ausente" | "justificado" }[] = [];
   let fieldEntries: { activityId: string; profileId: string; date: string; title: string; hours: number }[] = [];
@@ -73,8 +80,9 @@ export default async function CoordinationHoursPage() {
         .eq("cycle_id", cycle.id).order("activity_date", { ascending: false }),
       supabase.from("program_members").select("id, profile_id")
         .eq("cycle_id", cycle.id).eq("member_role", "academico_colaborador"),
-      supabase.from("training_classes").select("id, title, starts_at")
-        .eq("cycle_id", cycle.id).eq("status", "concluida").order("starts_at"),
+      supabase.from("training_classes").select("id, title, starts_at, training_modules(workload_hours)")
+        .eq("cycle_id", cycle.id).eq("status", "concluida").order("starts_at")
+        .overrideTypes<CoordinationClass[], { merge: false }>(),
       supabase.from("activities").select("id, title")
         .eq("cycle_id", cycle.id).eq("status", "concluida"),
       supabase.from("administrative_hours")
@@ -167,6 +175,11 @@ export default async function CoordinationHoursPage() {
 
   const totalPreparation = rows.reduce((sum, row) => sum + Number(row.preparation_hours), 0);
   const totalMeeting = rows.reduce((sum, row) => sum + Number(row.meeting_hours), 0);
+  const trainingRates = new Set(classes.map((trainingClass) => Number(trainingClass.training_modules?.workload_hours ?? 0)));
+  const [trainingRate] = trainingRates;
+  const trainingCredit = trainingRates.size === 1 && trainingRate > 0
+    ? `${formatHours(trainingRate)} por presença em treinamento.`
+    : "Cada presença em treinamento recebe a carga horária cadastrada para o encontro.";
 
   return (
     <main className="min-h-screen bg-[#f7f7f2] px-4 py-6 text-ink sm:px-6 lg:py-8">
@@ -191,7 +204,7 @@ export default async function CoordinationHoursPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">Horas por etapa do projeto</CardTitle>
-            <p className="text-sm text-stone-500">Cada treinamento credita 10 h por presença; cada reunião on-line, 4 h; a visita de 03/11, 20 h por acadêmico confirmado; o bloco administrativo declarado, 30 h por colaborador. “0 h · falta” indica ausência registrada; “—” indica que não há crédito nessa etapa.</p>
+            <p className="text-sm text-stone-500"><strong>{trainingCredit}</strong> Reuniões, visitas e apoio administrativo mostram as horas lançadas para cada colaborador. “0 h · falta” indica ausência registrada. “—” indica etapa sem crédito.</p>
           </CardHeader>
           <CardContent className="overflow-x-auto px-0 pb-0">
             <Table className="min-w-[1100px]">
@@ -224,7 +237,7 @@ export default async function CoordinationHoursPage() {
               <CardTitle className="text-lg">Apoio administrativo e operacional</CardTitle>
               <p className="text-sm text-stone-500">Bloco de 30 h por colaborador, declarado pelo responsável para o período de 01/08 a 04/11/2026. As tarefas não foram distribuídas em horas individuais por tipo. A validação institucional ainda é necessária para certificação.</p>
               <p className="text-sm text-stone-600">{administrativeRows[0].scope_note}</p>
-              <p className="text-xs text-stone-500">As duas reuniões on-line já lançadas, os treinamentos e a visita de campo são etapas distintas. A estimativa de desenvolvimento de 85 h atribuída a Leonardo Karino é um controle separado e não deve ser somada automaticamente a este bloco.</p>
+              <p className="text-xs text-stone-500">A estimativa de 85 h de desenvolvimento atribuída a Leonardo Karino consta em controle próprio por possível sobreposição com o apoio administrativo.</p>
             </CardHeader>
             <CardContent className="overflow-x-auto px-0 pb-0">
               <Table className="min-w-[750px]">
