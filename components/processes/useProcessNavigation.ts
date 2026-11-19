@@ -2,19 +2,19 @@
 import {useCallback,useEffect,useMemo,useRef,useState,type RefObject} from "react";
 import {normalizeProcessHash,processHref} from "@/lib/processes/navigation";
 
-type Options={cnes:string;validation:boolean;activityId?:string;items:{id:string}[];frame:RefObject<HTMLIFrameElement|null>};
-export function useProcessNavigation({cnes,validation,activityId,items,frame}:Options){
+type Options={cnes:string;validation:boolean;version?:number;activityId?:string;items:{id:string}[];frame:RefObject<HTMLIFrameElement|null>};
+export function useProcessNavigation({cnes,validation,version,activityId,items,frame}:Options){
   const known=useMemo(()=>items.map(i=>i.id),[items]);
   const [hash,setHash]=useState(()=>normalizeProcessHash(activityId?"#n="+activityId:"",known));
   const current=useRef(hash),loaded=useRef(false),ready=useRef(false);
   const [status,setStatus]=useState<"loading"|"ready"|"error">("loading"),[attempt,setAttempt]=useState(0);
   const update=useCallback((raw:string)=>{
     const next=normalizeProcessHash(raw,known);current.current=next;setHash(next);
-    const href=processHref(cnes,validation,next);
+    const href=processHref(cnes,validation,next,version);
     if(window.location.pathname+window.location.search+window.location.hash!==href)
       window.history.replaceState(window.history.state,"",href);
     return next;
-  },[known,cnes,validation]);
+  },[known,cnes,validation,version]);
   useEffect(()=>{
     const read=()=>window.location.hash||("#n="+(new URLSearchParams(window.location.search).get("atividade")||""));
     update(read());

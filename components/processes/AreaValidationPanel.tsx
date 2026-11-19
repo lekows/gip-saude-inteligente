@@ -10,7 +10,7 @@ import s from "./AreaValidationPanel.module.css";
 import {normalizeProcessHash,processHref} from "@/lib/processes/navigation";
 
 export type ValidationData={ledger:Ledger; macros:{id:string;title:string}[]; activities:Activity[]};
-type Props=ValidationData & {focusItem?:string;onActivityOpen?:(id:string)=>void;navigationHash?:string;map:ProcessMap; cnes:string; manager:boolean; userId:string; canContribute:boolean; people:ProcessPerson[]; feedback:ProcessFeedback[];
+type Props=ValidationData & {focusItem?:string;onActivityOpen?:(id:string)=>void;navigationHash?:string;version?:number;map:ProcessMap; cnes:string; manager:boolean; userId:string; canContribute:boolean; people:ProcessPerson[]; feedback:ProcessFeedback[];
   suggest:(id:string,kind:"understood"|"change"|"new_step")=>void; review:(id:string)=>void; manage:()=>void};
 const symbols={pending:"◐",approved:"✓",correction:"!"};
 function Badge({value}:{value:Signal}){return <span className={s.badge} data-state={value}><b aria-hidden>{symbols[value]}</b>{signalLabel[value]}</span>;}
@@ -52,7 +52,7 @@ function Item({p,item}:{p:Props;item:Activity}){
   const feedback=p.feedback.filter(f=>f.item_id===item.id);
   const editable=p.map.status==="open" && p.canContribute;
   const context=new URLSearchParams((p.navigationHash||"").replace(/^#/,""));context.set("n",item.id);
-  const diagramHref=processHref(p.cnes,false,normalizeProcessHash("#"+context.toString(),[...p.macros,...p.activities].map(i=>i.id)));
+  const diagramHref=processHref(p.cnes,false,normalizeProcessHash("#"+context.toString(),[...p.macros,...p.activities].map(i=>i.id)),p.version);
   return <details className={s.item} open={item.id===p.focusItem || undefined} onToggle={event=>{if(event.currentTarget.open)p.onActivityOpen?.(item.id);}}><summary><span>{item.title}</span><Badge value={state.signal}/></summary>
     <div className={s.body}>{item.editorial&&<aside className="rounded-md border border-teal-200 bg-teal-50 p-3 text-sm"><b>{item.editorial.decision==="accepted"?"Texto consolidado com as contribuições":"Esclarecimento pendente"}</b><p>{item.editorial.note}</p><p>Contribuição de {item.editorial.source_author_name}. A consolidação assistida não equivale à validação da área.</p></aside>}<p>{state.revision?.details?.routine||item.account}</p>
     {(state.revision?.details??item.editorialDetails) && <dl>{Object.entries(detailFields).slice(1).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{(state.revision?.details??item.editorialDetails)?.[key as keyof Details]}</dd></div>)}</dl>}

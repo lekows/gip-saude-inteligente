@@ -18,9 +18,17 @@ export function normalizeProcessHash(raw: unknown, knownIds: readonly string[]):
   return out.size ? "#" + out.toString() : "";
 }
 
-export function processHref(cnes: string, validation: boolean, hash: string): string {
+export function parseProcessRound(value: unknown): number | undefined {
+  if (typeof value !== "string" || !/^[1-9]\d{0,9}$/.test(value)) return;
+  const version = Number(value);
+  return version <= 2147483647 ? version : undefined;
+}
+
+export function processHref(cnes: string, validation: boolean, hash: string, version?: number): string {
   if (!/^\d{7}$/.test(cnes)) throw new Error("CNES inválido.");
   const node = new URLSearchParams(hash.replace(/^#/, "")).get("n");
-  const activity = node && /^M\d{2}\.A\d{2}$/.test(node) ? "?atividade=" + encodeURIComponent(node) : "";
-  return `/unidades/${cnes}/processos${validation ? "/validacao" : ""}${activity}${hash}`;
+  const query = new URLSearchParams();
+  if (version !== undefined && parseProcessRound(String(version))) query.set("rodada", String(version));
+  if (node && /^M\d{2}\.A\d{2}$/.test(node)) query.set("atividade", node);
+  return `/unidades/${cnes}/processos${validation ? "/validacao" : ""}${query.size ? "?" + query : ""}${hash}`;
 }

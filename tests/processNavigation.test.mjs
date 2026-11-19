@@ -22,3 +22,13 @@ test("authentication permits a precise activity destination without accepting ar
  for(const path of ["/unidades/5882451/processos?atividade=M04.A02","/unidades/5882451/processos/validacao?atividade=M04.A02"]) assert.equal(safeReturnPath(path),path);
  for(const path of ["/unidades/5882451/processos?atividade=//evil.invalid","/unidades/5882451/processos?next=//evil.invalid","/unidades/5882451/processos?atividade=M04.A02&next=//evil.invalid","/unidades/5882451/processos?atividade=M04.A02#x","/unidades/5882451?atividade=M04.A02"]) assert.equal(safeReturnPath(path),null);
 });
+test("historical round links retain their round across the diagram, validation and login",()=>{
+ const graph=processHref("5882451",false,"#m=M06&n=M06.A03",2);
+ const validation=processHref("5882451",true,"#m=M06&n=M06.A03",2);
+ assert.equal(graph,"/unidades/5882451/processos?rodada=2&atividade=M06.A03#m=M06&n=M06.A03");
+ assert.equal(validation,"/unidades/5882451/processos/validacao?rodada=2&atividade=M06.A03#m=M06&n=M06.A03");
+ assert.equal(safeReturnPath(validation.split("#")[0]),validation.split("#")[0]);
+ assert.equal(safeReturnPath("/unidades/5882451/processos?rodada=1"),"/unidades/5882451/processos?rodada=1");
+ for(const query of ["rodada=0","rodada=-2","rodada=2&rodada=1","rodada=2&next=//evil.invalid","rodada=2147483648"])
+   assert.equal(safeReturnPath("/unidades/5882451/processos?"+query),null);
+});
